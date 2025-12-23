@@ -317,7 +317,7 @@ const Sink = ({
     if (swapPreview) setSwapPreview(null)
   }
 
-  const handleTouchEnd = (e: React.TouchEvent, position: number) => {
+  const handleTouchEnd = (_e: React.TouchEvent, position: number) => {
     if (!draggingTray || !isTouchDragging) {
       // If not dragging, treat as click
       setTouchStartPos(null)
