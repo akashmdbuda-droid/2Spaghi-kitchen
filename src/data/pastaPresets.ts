@@ -8,9 +8,7 @@ export interface PastaPreset {
 
 // Using placeholder images - replace with actual pasta images
 const getPastaImageUrl = (pastaName: string): string => {
-  // Using Unsplash API for pasta images (free, no API key needed for basic use)
-  const searchTerm = pastaName.toLowerCase().replace(' - ', '-').replace(' ', '-')
-  return `https://source.unsplash.com/200x200/?pasta-${searchTerm}&sig=${pastaName}`
+  return `/images/pasta/${pastaName}.png`
 }
 
 export const pastaPresets: PastaPreset[] = [

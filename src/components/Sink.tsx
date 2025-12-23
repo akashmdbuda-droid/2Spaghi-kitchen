@@ -13,7 +13,8 @@ interface SwapOption {
 
 interface SinkProps {
   trays: Tray[]
-  onPlaceTray: (position: number) => void
+  onPlaceTray: (position: number, trayType?: 'regular' | 'large' | 'extraLarge') => void
+  onMobilePositionTap?: (position: number) => void
   onRemoveTray: (trayId: string) => void
   onRemovePasta: (trayId: string, pastaId: string) => void
   onMoveTray: (trayId: string, newPosition: number) => void
@@ -27,6 +28,7 @@ interface SinkProps {
 const Sink = ({
   trays,
   onPlaceTray,
+  onMobilePositionTap,
   onRemoveTray,
   onRemovePasta,
   onMoveTray,
@@ -55,9 +57,23 @@ const Sink = ({
   // Helper to calculate positions a tray would occupy
   const calculateTrayPositions = (startPosition: number, size: number): number[] => {
     if (size === 4) {
+      const isMobilePortrait = window.innerWidth <= 768
+      if (isMobilePortrait) {
+        // Mobile: 2x2 block is 4 consecutive positions
+        return [startPosition, startPosition + 1, startPosition + 2, startPosition + 3]
+      }
+      // Desktop: 2x2 block spans 2 rows
       return [startPosition, startPosition + 1, startPosition + 4, startPosition + 5]
     }
     return [startPosition]
+  }
+  
+  // Get valid start positions for extra large trays
+  const getValidExtraLargeStartPositions = (): number[] => {
+    const isMobilePortrait = window.innerWidth <= 768
+    // Mobile portrait (2 cols): only column 0 positions that have room below: 0, 2, 4
+    // Desktop (4 cols): positions 0, 1, 2 (top row, with room to the right)
+    return isMobilePortrait ? [0, 2, 4] : [0, 1, 2]
   }
 
   // Update elapsed times every second
@@ -106,37 +122,14 @@ const Sink = ({
 
   // Find all possible start positions for a 2x2 block that includes the given position
   const getPossibleStartPositions = (position: number): number[] => {
-    // Detect grid layout: mobile portrait (2x4) vs desktop (4x2)
-    const isMobilePortrait = window.innerWidth <= 768
-    const cols = isMobilePortrait ? 2 : 4
-    const rows = isMobilePortrait ? 4 : 2
-    
-    const col = position % cols
-    const row = Math.floor(position / cols)
     const possibleStarts: number[] = []
+    const validStarts = getValidExtraLargeStartPositions()
     
-    if (isMobilePortrait) {
-      // Mobile portrait: 2 columns, 4 rows
-      // 2x2 block in portrait: covers 2 consecutive rows in same column
-      // Valid start positions: 0, 2, 4, 6 (top of each column pair)
-      for (let startRow = 0; startRow <= rows - 2; startRow++) {
-        if (row >= startRow && row <= startRow + 1) {
-          const startPos = startRow * cols + col
-          if (startPos >= 0 && startPos <= 6) {
-            possibleStarts.push(startPos)
-          }
-        }
-      }
-    } else {
-      // Desktop: 4 columns, 2 rows
-      // A 2x2 block starting at X covers: X, X+1, X+4, X+5
-      // Valid start positions: 0, 1, 2
-      for (let startCol = 0; startCol <= cols - 2; startCol++) {
-        if (col >= startCol && col <= startCol + 1) {
-          if (row === 0 || row === 1) {
-            possibleStarts.push(startCol)
-          }
-        }
+    // Check each valid start position to see if it includes the clicked position
+    for (const startPos of validStarts) {
+      const blockPositions = calculateTrayPositions(startPos, 4)
+      if (blockPositions.includes(position)) {
+        possibleStarts.push(startPos)
       }
     }
     
@@ -144,13 +137,21 @@ const Sink = ({
   }
 
   const handlePositionClick = (position: number) => {
-    const size = getTraySize(selectedTrayType)
-    
     // Check if clicked position is occupied
     const existingTray = getTrayAtPosition(position)
     if (existingTray) {
       return // Don't place if clicked position is already occupied
     }
+    
+    // On mobile, use tap handler for popup flow
+    const isMobile = window.innerWidth <= 768
+    if (isMobile && onMobilePositionTap) {
+      onMobilePositionTap(position)
+      return
+    }
+    
+    // Desktop: use normal flow
+    const size = getTraySize(selectedTrayType)
     
     if (size === 4) {
       // For extra large trays, find a valid 2x2 block that includes this position
@@ -163,7 +164,17 @@ const Sink = ({
           return
         }
       }
-      // No valid placement found
+      
+      // No valid placement found at clicked position - auto-find ANY empty 2x2 space
+      const allStartPositions = getValidExtraLargeStartPositions()
+      
+      for (const startPosition of allStartPositions) {
+        if (canPlaceTray(startPosition, size)) {
+          onPlaceTray(startPosition)
+          return
+        }
+      }
+      // No valid placement found anywhere
     } else {
       // For regular and large trays, use the clicked position directly
       if (canPlaceTray(position, size)) {
@@ -183,19 +194,24 @@ const Sink = ({
     }
     
     if (size === 4) {
-      // For extra large trays, find a valid 2x2 block that includes this position
+      // For extra large trays, first try to find a valid 2x2 block that includes this position
       const possibleStarts = getPossibleStartPositions(position)
       
       for (const startPosition of possibleStarts) {
         if (canPlaceTray(startPosition, size)) {
-          // Return the 2x2 block positions based on layout
-          const isMobilePortrait = window.innerWidth <= 768
-          const cols = isMobilePortrait ? 2 : 4
-          return isMobilePortrait
-            ? [startPosition, startPosition + cols, startPosition + cols + 1, startPosition + 1].filter((p, i, arr) => arr.indexOf(p) === i && p >= 0 && p <= 7)
-            : [startPosition, startPosition + 1, startPosition + 4, startPosition + 5]
+          return calculateTrayPositions(startPosition, size)
         }
       }
+      
+      // No space at clicked position - show preview at first available 2x2 space
+      const allStartPositions = getValidExtraLargeStartPositions()
+      
+      for (const startPosition of allStartPositions) {
+        if (canPlaceTray(startPosition, size)) {
+          return calculateTrayPositions(startPosition, size)
+        }
+      }
+      
       return null
     } else {
       // For regular and large trays, use the hovered position directly
@@ -264,12 +280,7 @@ const Sink = ({
       const possibleStarts = getPossibleStartPositions(position)
       for (const startPosition of possibleStarts) {
         if (canPlaceTray(startPosition, size, draggingTray.id)) {
-          const newPreview = [
-            startPosition,
-            startPosition + 1,
-            startPosition + 4,
-            startPosition + 5
-          ]
+          const newPreview = calculateTrayPositions(startPosition, size)
           if (!dropPreview || JSON.stringify(dropPreview) !== JSON.stringify(newPreview)) {
             setDropPreview(newPreview)
             setSwapPreview(null)
@@ -296,7 +307,7 @@ const Sink = ({
         const possibleStarts = getPossibleStartPositions(position)
         if (possibleStarts.length > 0) {
           const startPos = possibleStarts[0]
-          dragToPositions = [startPos, startPos + 1, startPos + 4, startPos + 5]
+          dragToPositions = calculateTrayPositions(startPos, size)
         }
       } else {
         dragToPositions = [position]
@@ -400,12 +411,7 @@ const Sink = ({
       const possibleStarts = getPossibleStartPositions(position)
       for (const startPosition of possibleStarts) {
         if (canPlaceTray(startPosition, size, draggingTray.id)) {
-          const newPreview = [
-            startPosition,
-            startPosition + 1,
-            startPosition + 4,
-            startPosition + 5
-          ]
+          const newPreview = calculateTrayPositions(startPosition, size)
           if (!dropPreview || JSON.stringify(dropPreview) !== JSON.stringify(newPreview)) {
             setDropPreview(newPreview)
             setSwapPreview(null)
@@ -433,7 +439,7 @@ const Sink = ({
         const possibleStarts = getPossibleStartPositions(position)
         if (possibleStarts.length > 0) {
           const startPos = possibleStarts[0]
-          dragToPositions = [startPos, startPos + 1, startPos + 4, startPos + 5]
+          dragToPositions = calculateTrayPositions(startPos, size)
         }
       } else {
         dragToPositions = [position]

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import Sink from './components/Sink'
 import TrayDropdown from './components/TrayDropdown'
 import PastaForm from './components/PastaForm'
+import MobileTrayModal from './components/MobileTrayModal'
+import MobilePastaModal from './components/MobilePastaModal'
 import './App.css'
 
 export interface Pasta {
@@ -23,6 +25,12 @@ function App() {
   const [trays, setTrays] = useState<Tray[]>([])
   const [selectedTrayType, setSelectedTrayType] = useState<'regular' | 'large' | 'extraLarge'>('regular')
   const [newlyAddedTrayId, setNewlyAddedTrayId] = useState<string | null>(null)
+  
+  // Mobile modals
+  const [showTrayModal, setShowTrayModal] = useState(false)
+  const [showPastaModal, setShowPastaModal] = useState(false)
+  const [pendingTrayPosition, setPendingTrayPosition] = useState<number | null>(null)
+  const [pendingTrayType, setPendingTrayType] = useState<'regular' | 'large' | 'extraLarge' | null>(null)
 
   const getTraySize = (type: 'regular' | 'large' | 'extraLarge'): number => {
     switch (type) {
@@ -36,18 +44,17 @@ function App() {
   // Calculate positions for a 2x2 block based on layout
   const calculate2x2BlockPositions = (startPosition: number): number[] => {
     const isMobilePortrait = typeof window !== 'undefined' && window.innerWidth <= 768
-    const cols = isMobilePortrait ? 2 : 4
     
     if (isMobilePortrait) {
       // Portrait: 2 columns, 4 rows
-      // 2x2 block: covers 2 consecutive rows in same column
-      // Start positions: 0, 2, 4, 6
+      // 2x2 block MUST start from column 0 (even positions: 0, 2, 4)
+      // Block covers: startPosition, startPosition+1, startPosition+2, startPosition+3
       return [
-        startPosition,           // top
-        startPosition + cols,    // bottom
-        startPosition + cols + 1, // bottom-right (if applicable)
-        startPosition + 1        // right (if applicable)
-      ].filter(pos => pos >= 0 && pos <= 7)
+        startPosition,           // top-left
+        startPosition + 1,       // top-right
+        startPosition + 2,       // bottom-left
+        startPosition + 3        // bottom-right
+      ]
     } else {
       // Desktop: 4 columns, 2 rows
       // 2x2 block: covers 2 columns x 2 rows
@@ -60,13 +67,21 @@ function App() {
     }
   }
 
+  // Get valid start positions for extra large trays based on layout
+  const getValidExtraLargeStartPositions = (): number[] => {
+    const isMobilePortrait = typeof window !== 'undefined' && window.innerWidth <= 768
+    // Mobile portrait (2 cols): only column 0 positions that have room below: 0, 2, 4
+    // Desktop (4 cols): positions 0, 1, 2 (top row, with room to the right)
+    return isMobilePortrait ? [0, 2, 4] : [0, 1, 2]
+  }
+
   const canPlaceTray = (startPosition: number, size: number, excludeTrayId?: string): boolean => {
     // For extra large trays (size 4), they occupy a 2x2 block
     if (size === 4) {
-      const isMobilePortrait = typeof window !== 'undefined' && window.innerWidth <= 768
-      const maxStart = isMobilePortrait ? 6 : 2
+      const validStarts = getValidExtraLargeStartPositions()
       
-      if (startPosition < 0 || startPosition > maxStart) {
+      // Start position must be a valid 2x2 block start
+      if (!validStarts.includes(startPosition)) {
         return false
       }
       
@@ -113,34 +128,96 @@ function App() {
     return true
   }
 
-  const handlePlaceTray = (position: number) => {
-    const size = getTraySize(selectedTrayType)
+  const handlePlaceTray = (position: number, trayType?: 'regular' | 'large' | 'extraLarge') => {
+    const typeToUse = trayType || selectedTrayType
+    const size = getTraySize(typeToUse)
+    
+    let startPosition = position
     
     if (!canPlaceTray(position, size)) {
-      return
+      // For extra large trays, auto-find any empty 2x2 space
+      if (size === 4) {
+        const validStartPositions = getValidExtraLargeStartPositions()
+        
+        let foundPosition = false
+        for (const tryPos of validStartPositions) {
+          if (canPlaceTray(tryPos, size)) {
+            startPosition = tryPos
+            foundPosition = true
+            break
+          }
+        }
+        
+        if (!foundPosition) {
+          return // No space available anywhere
+        }
+      } else {
+        return // For regular/large trays, don't auto-relocate
+      }
     }
 
     const positions: number[] = []
     if (size === 4) {
       // Extra large tray: 2x2 block
-      positions.push(...calculate2x2BlockPositions(position))
+      positions.push(...calculate2x2BlockPositions(startPosition))
     } else {
       // Regular and large trays: single position
-      positions.push(position)
+      positions.push(startPosition)
     }
 
     const newTray: Tray = {
       id: `tray-${Date.now()}`,
-      type: selectedTrayType,
+      type: typeToUse,
       positions,
       pastas: []
     }
 
     setTrays([...trays, newTray])
-    // Auto-select this tray for pasta form
-    setNewlyAddedTrayId(newTray.id)
-    // Clear selection after a short delay
-    setTimeout(() => setNewlyAddedTrayId(null), 100)
+    
+    // On mobile, show pasta modal after placing tray
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+    if (isMobile) {
+      setPendingTrayType(typeToUse)
+      setShowPastaModal(true)
+      setNewlyAddedTrayId(newTray.id)
+    } else {
+      // Desktop: auto-select for pasta form
+      setNewlyAddedTrayId(newTray.id)
+      setTimeout(() => setNewlyAddedTrayId(null), 100)
+    }
+  }
+
+  // Mobile: Handle empty position tap
+  const handleMobilePositionTap = (position: number) => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+    if (isMobile) {
+      setPendingTrayPosition(position)
+      setShowTrayModal(true)
+    } else {
+      // Desktop: use normal flow
+      handlePlaceTray(position)
+    }
+  }
+
+  // Mobile: Handle tray type selection from modal
+  const handleMobileTraySelect = (type: 'regular' | 'large' | 'extraLarge') => {
+    if (pendingTrayPosition !== null) {
+      handlePlaceTray(pendingTrayPosition, type)
+      setPendingTrayPosition(null)
+    }
+  }
+
+  // Mobile: Handle pasta selection from modal
+  const handleMobilePastaSelect = (name: string, cookingTime: number) => {
+    if (newlyAddedTrayId) {
+      handleAddPasta(newlyAddedTrayId, {
+        name,
+        cookingTime,
+        trayType: pendingTrayType || 'regular'
+      })
+      setPendingTrayType(null)
+      setNewlyAddedTrayId(null)
+    }
   }
 
   const handleAddPasta = (trayId: string, pasta: Omit<Pasta, 'id' | 'startTime'>) => {
@@ -182,10 +259,10 @@ function App() {
   // Extended canPlaceTray that can exclude multiple trays
   const canPlaceTrayWithExclusions = (startPosition: number, size: number, excludeTrayIds: string[]): boolean => {
     if (size === 4) {
-      const isMobilePortrait = typeof window !== 'undefined' && window.innerWidth <= 768
-      const maxStart = isMobilePortrait ? 6 : 2
+      const validStarts = getValidExtraLargeStartPositions()
       
-      if (startPosition < 0 || startPosition > maxStart) {
+      // Start position must be a valid 2x2 block start
+      if (!validStarts.includes(startPosition)) {
         return false
       }
       
@@ -433,6 +510,7 @@ function App() {
           <Sink
             trays={trays}
             onPlaceTray={handlePlaceTray}
+            onMobilePositionTap={handleMobilePositionTap}
             onRemoveTray={handleRemoveTray}
             onRemovePasta={handleRemovePasta}
             onMoveTray={handleMoveTray}
@@ -443,6 +521,25 @@ function App() {
             findSwapOption={findSwapOption}
           />
         </div>
+
+        {/* Mobile Modals */}
+        <MobileTrayModal
+          isOpen={showTrayModal}
+          onClose={() => {
+            setShowTrayModal(false)
+            setPendingTrayPosition(null)
+          }}
+          onSelectTrayType={handleMobileTraySelect}
+        />
+        <MobilePastaModal
+          isOpen={showPastaModal}
+          onClose={() => {
+            setShowPastaModal(false)
+            setPendingTrayType(null)
+          }}
+          onSelectPasta={handleMobilePastaSelect}
+          trayType={pendingTrayType || 'regular'}
+        />
 
         <div className="right-panel">
           <PastaForm

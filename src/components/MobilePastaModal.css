@@ -1,0 +1,119 @@
+.mobile-pasta-modal {
+  max-height: 85vh;
+}
+
+.mobile-pasta-section {
+  margin-bottom: 24px;
+}
+
+.mobile-pasta-section:last-child {
+  margin-bottom: 0;
+}
+
+.mobile-pasta-section-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+
+.mobile-pasta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.mobile-pasta-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-pasta-card:active {
+  transform: scale(0.95);
+  border-color: #667eea;
+  background: #f9fafb;
+}
+
+.mobile-pasta-image {
+  width: 70px;
+  height: 70px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-pasta-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mobile-pasta-emoji {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.mobile-pasta-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #111827;
+  text-align: center;
+  line-height: 1.2;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+.mobile-pasta-time {
+  font-size: 0.7rem;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+}
+
+.mobile-pasta-time-range {
+  font-size: 0.65rem;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+}
+
+.ravioli-card .mobile-pasta-image {
+  width: 75px;
+  height: 75px;
+}
+
+@media (max-width: 480px) {
+  .mobile-pasta-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  
+  .mobile-pasta-image {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .mobile-pasta-name {
+    font-size: 0.7rem;
+  }
+  
+  .ravioli-card .mobile-pasta-image {
+    width: 65px;
+    height: 65px;
+  }
+}
+
