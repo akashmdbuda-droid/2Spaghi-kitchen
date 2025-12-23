@@ -87,7 +87,7 @@
   box-sizing: border-box;
 }
 
-/* Portrait mode for mobile - 2 columns x 4 rows, full screen */
+/* Portrait mode for mobile - 2 columns x 4 rows */
 @media (max-width: 768px) {
   .sink {
     grid-template-columns: repeat(2, 1fr);
@@ -126,14 +126,14 @@
 
 @media (max-width: 768px) {
   .sink-position {
-    min-height: 100px;
+    aspect-ratio: unset; /* Remove aspect ratio to fit 4 rows */
+    min-height: 0;
     border-width: 2px;
   }
 }
 
 @media (max-width: 480px) {
   .sink-position {
-    min-height: 80px;
     border-width: 2px;
     border-radius: 8px;
   }
@@ -451,6 +451,22 @@
   z-index: 10;
 }
 
+/* Mobile: adjust for 8px gap */
+@media (max-width: 768px) {
+  .sink-position.extra-large-tray .tray-container {
+    width: calc(200% + 8px);
+    height: calc(200% + 8px);
+  }
+}
+
+/* Small mobile: adjust for 6px gap */
+@media (max-width: 480px) {
+  .sink-position.extra-large-tray .tray-container {
+    width: calc(200% + 6px);
+    height: calc(200% + 6px);
+  }
+}
+
 .sink-position.extra-large-tray .tray {
   width: 100%;
   height: 100%;
@@ -636,15 +652,13 @@
 
 /* Touch dragging styles */
 .sink.is-touch-dragging .sink-position {
-  transition: none; /* Disable transitions during touch drag for better performance */
+  transition: transform 0.15s ease-out, background 0.15s ease-out, border-color 0.15s ease-out;
 }
 
+/* Hide the original tray during touch drag */
 .sink.is-touch-dragging .tray-container.is-dragging {
-  opacity: 0.8;
-  transform: scale(1.08);
-  z-index: 1000;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  transition: transform 0.1s ease-out;
+  opacity: 0.3;
+  transform: scale(0.95);
 }
 
 /* Improved touch drag feedback */
@@ -652,6 +666,66 @@
   cursor: grabbing !important;
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* Floating tray that follows finger */
+.floating-drag-tray {
+  animation: floatIn 0.15s ease-out;
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.35));
+}
+
+.floating-drag-tray .tray {
+  transform: scale(1.05) rotate(-2deg);
+  background: white;
+  border-width: 3px;
+}
+
+@keyframes floatIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Enhanced drop preview during touch drag */
+.sink.is-touch-dragging .sink-position.drop-preview {
+  background: linear-gradient(135deg, #bbf7d0 0%, #86efac 100%);
+  border-color: #22c55e;
+  border-width: 3px;
+  transform: scale(1.02);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+}
+
+.sink.is-touch-dragging .sink-position.drop-preview-part {
+  background: linear-gradient(135deg, #bbf7d0 0%, #86efac 100%);
+  border-color: #22c55e;
+  transform: scale(1.02);
+}
+
+/* Pulse animation for valid drop targets */
+.sink.is-touch-dragging .sink-position.drop-preview::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 2px solid #22c55e;
+  border-radius: 14px;
+  animation: dropPulse 1s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes dropPulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
 }
 
 /* Better touch targets for mobile */
@@ -667,6 +741,68 @@
   
   .sink.is-dragging-mode .sink-position {
     touch-action: auto;
+  }
+  
+  /* Make empty positions more inviting during drag */
+  .sink.is-dragging-mode .sink-position:not(.occupied):not(.drop-preview):not(.drop-preview-part) {
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    border-style: dashed;
+    opacity: 0.7;
+  }
+}
+
+/* @dnd-kit specific styles */
+
+/* Drag overlay styling */
+.drag-overlay-tray {
+  width: 150px;
+  cursor: grabbing;
+  animation: pickUp 0.15s ease-out;
+}
+
+.drag-overlay-tray .tray {
+  transform: rotate(-2deg);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25), 0 8px 16px rgba(0, 0, 0, 0.15);
+  border-width: 3px;
+}
+
+.drag-overlay-tray .tray-overlay {
+  background: white;
+}
+
+@keyframes pickUp {
+  from {
+    opacity: 0.5;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Position being dragged over */
+.sink-position.drag-over {
+  border-color: #6366f1;
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  transform: scale(1.02);
+  transition: all 0.15s ease;
+}
+
+/* Smooth transitions during drag */
+.sink.is-dragging-mode .sink-position {
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+/* Mobile specific drag improvements */
+@media (max-width: 768px) {
+  .drag-overlay-tray {
+    width: calc(50vw - 24px);
+    max-width: 180px;
+  }
+  
+  .drag-overlay-tray .tray {
+    transform: rotate(-1deg);
   }
 }
 

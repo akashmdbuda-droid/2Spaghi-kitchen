@@ -1,4 +1,16 @@
 import { useState, useEffect } from 'react'
+import {
+  DndContext,
+  DragOverlay,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  TouchSensor,
+  DragStartEvent,
+  DragOverEvent,
+  DragEndEvent,
+  closestCenter,
+} from '@dnd-kit/core'
 import { Tray, Pasta } from '../App'
 import './Sink.css'
 
@@ -40,7 +52,7 @@ const Sink = ({
 }: SinkProps) => {
   const [hoveredPosition, setHoveredPosition] = useState<number | null>(null)
   const [elapsedTimes, setElapsedTimes] = useState<Record<string, number>>({})
-  const [draggingTray, setDraggingTray] = useState<Tray | null>(null)
+  const [activeTray, setActiveTray] = useState<Tray | null>(null)
   const [dropPreview, setDropPreview] = useState<number[] | null>(null)
   const [swapPreview, setSwapPreview] = useState<{
     dragToPositions: number[]
@@ -51,29 +63,58 @@ const Sink = ({
     }>
     swapOption: SwapOption
   } | null>(null)
-  const [touchStartPos, setTouchStartPos] = useState<{ x: number; y: number } | null>(null)
-  const [isTouchDragging, setIsTouchDragging] = useState(false)
-  
+
+  // Configure sensors for both mouse and touch
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement before drag starts
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 150, // 150ms hold before drag starts
+        tolerance: 8,
+      },
+    })
+  )
+
   // Helper to calculate positions a tray would occupy
   const calculateTrayPositions = (startPosition: number, size: number): number[] => {
     if (size === 4) {
       const isMobilePortrait = window.innerWidth <= 768
       if (isMobilePortrait) {
-        // Mobile: 2x2 block is 4 consecutive positions
+        // Mobile portrait: 2 columns, 4 rows
+        // 2x2 block covers 2 columns × 2 rows = 4 consecutive positions
         return [startPosition, startPosition + 1, startPosition + 2, startPosition + 3]
       }
-      // Desktop: 2x2 block spans 2 rows
+      // Desktop: 4 columns, 2 rows - 2x2 block spans columns and rows
       return [startPosition, startPosition + 1, startPosition + 4, startPosition + 5]
     }
     return [startPosition]
   }
-  
+
   // Get valid start positions for extra large trays
   const getValidExtraLargeStartPositions = (): number[] => {
     const isMobilePortrait = window.innerWidth <= 768
-    // Mobile portrait (2 cols): only column 0 positions that have room below: 0, 2, 4
-    // Desktop (4 cols): positions 0, 1, 2 (top row, with room to the right)
+    // Mobile portrait (2 cols): positions 0, 2, 4 (any row that has room below)
+    // Desktop (4 cols): positions 0, 1, 2 (top row with room to the right)
     return isMobilePortrait ? [0, 2, 4] : [0, 1, 2]
+  }
+
+  // Find possible start positions for a 2x2 block that includes the given position
+  const getPossibleStartPositions = (position: number): number[] => {
+    const possibleStarts: number[] = []
+    const validStarts = getValidExtraLargeStartPositions()
+    
+    for (const startPos of validStarts) {
+      const blockPositions = calculateTrayPositions(startPos, 4)
+      if (blockPositions.includes(position)) {
+        possibleStarts.push(startPos)
+      }
+    }
+    
+    return possibleStarts
   }
 
   // Update elapsed times every second
@@ -120,44 +161,20 @@ const Sink = ({
     return Math.min(100, (elapsed / pasta.cookingTime) * 100)
   }
 
-  // Find all possible start positions for a 2x2 block that includes the given position
-  const getPossibleStartPositions = (position: number): number[] => {
-    const possibleStarts: number[] = []
-    const validStarts = getValidExtraLargeStartPositions()
-    
-    // Check each valid start position to see if it includes the clicked position
-    for (const startPos of validStarts) {
-      const blockPositions = calculateTrayPositions(startPos, 4)
-      if (blockPositions.includes(position)) {
-        possibleStarts.push(startPos)
-      }
-    }
-    
-    return possibleStarts
-  }
-
   const handlePositionClick = (position: number) => {
-    // Check if clicked position is occupied
     const existingTray = getTrayAtPosition(position)
-    if (existingTray) {
-      return // Don't place if clicked position is already occupied
-    }
-    
-    // On mobile, use tap handler for popup flow
+    if (existingTray) return
+
     const isMobile = window.innerWidth <= 768
     if (isMobile && onMobilePositionTap) {
       onMobilePositionTap(position)
       return
     }
-    
-    // Desktop: use normal flow
+
     const size = getTraySize(selectedTrayType)
-    
+
     if (size === 4) {
-      // For extra large trays, find a valid 2x2 block that includes this position
       const possibleStarts = getPossibleStartPositions(position)
-      
-      // Try each possible start position and use the first valid one
       for (const startPosition of possibleStarts) {
         if (canPlaceTray(startPosition, size)) {
           onPlaceTray(startPosition)
@@ -165,18 +182,14 @@ const Sink = ({
         }
       }
       
-      // No valid placement found at clicked position - auto-find ANY empty 2x2 space
       const allStartPositions = getValidExtraLargeStartPositions()
-      
       for (const startPosition of allStartPositions) {
         if (canPlaceTray(startPosition, size)) {
           onPlaceTray(startPosition)
           return
         }
       }
-      // No valid placement found anywhere
     } else {
-      // For regular and large trays, use the clicked position directly
       if (canPlaceTray(position, size)) {
         onPlaceTray(position)
       }
@@ -186,35 +199,26 @@ const Sink = ({
   const getHoverPreview = (position: number): number[] | null => {
     if (hoveredPosition === null) return null
     const size = getTraySize(selectedTrayType)
-    
-    // Check if hovered position is already occupied
+
     const existingTray = getTrayAtPosition(position)
-    if (existingTray) {
-      return null
-    }
-    
+    if (existingTray) return null
+
     if (size === 4) {
-      // For extra large trays, first try to find a valid 2x2 block that includes this position
       const possibleStarts = getPossibleStartPositions(position)
-      
       for (const startPosition of possibleStarts) {
         if (canPlaceTray(startPosition, size)) {
           return calculateTrayPositions(startPosition, size)
         }
       }
       
-      // No space at clicked position - show preview at first available 2x2 space
       const allStartPositions = getValidExtraLargeStartPositions()
-      
       for (const startPosition of allStartPositions) {
         if (canPlaceTray(startPosition, size)) {
           return calculateTrayPositions(startPosition, size)
         }
       }
-      
       return null
     } else {
-      // For regular and large trays, use the hovered position directly
       if (canPlaceTray(position, size)) {
         return [position]
       }
@@ -222,483 +226,386 @@ const Sink = ({
     }
   }
 
-  const previewPositions = hoveredPosition !== null ? getHoverPreview(hoveredPosition) : null
-
-  // Drag and drop handlers
-  const handleDragStart = (e: React.DragEvent, tray: Tray) => {
-    setDraggingTray(tray)
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', tray.id)
-  }
-
-  const handleDragEnd = () => {
-    setDraggingTray(null)
-    setDropPreview(null)
-    setSwapPreview(null)
-  }
-
-  // Touch event handlers for mobile drag and drop
-  const handleTouchStart = (e: React.TouchEvent, tray: Tray) => {
-    const touch = e.touches[0]
-    setTouchStartPos({ x: touch.clientX, y: touch.clientY })
-    setDraggingTray(tray)
-    setIsTouchDragging(false)
-    e.stopPropagation() // Prevent triggering position click
-  }
-
-  const handleTouchMove = (e: React.TouchEvent, position: number) => {
-    if (!draggingTray || !touchStartPos) return
-    
-    const touch = e.touches[0]
-    const deltaX = Math.abs(touch.clientX - touchStartPos.x)
-    const deltaY = Math.abs(touch.clientY - touchStartPos.y)
-    
-    // Start dragging after 8px movement (more sensitive for better UX)
-    if (deltaX > 8 || deltaY > 8) {
-      if (!isTouchDragging) {
-        setIsTouchDragging(true)
-        // Add haptic feedback if available
-        if (navigator.vibrate) {
-          navigator.vibrate(10)
-        }
-      }
-      e.preventDefault() // Prevent scrolling
-      e.stopPropagation()
-      
-      // Simulate drag over behavior
-      handleDragOverForTouch(position)
-    }
-  }
-
-  const handleDragOverForTouch = (position: number) => {
-    if (!draggingTray) return
-
-    const size = getTraySize(draggingTray.type)
-    
-    // First, try normal placement
-    if (size === 4) {
-      const possibleStarts = getPossibleStartPositions(position)
-      for (const startPosition of possibleStarts) {
-        if (canPlaceTray(startPosition, size, draggingTray.id)) {
-          const newPreview = calculateTrayPositions(startPosition, size)
-          if (!dropPreview || JSON.stringify(dropPreview) !== JSON.stringify(newPreview)) {
-            setDropPreview(newPreview)
-            setSwapPreview(null)
-          }
-          return
-        }
-      }
-    } else {
-      if (canPlaceTray(position, size, draggingTray.id)) {
-        if (!dropPreview || dropPreview[0] !== position) {
-          setDropPreview([position])
-          setSwapPreview(null)
-        }
-        return
+  // @dnd-kit handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const trayId = event.active.id as string
+    const tray = trays.find(t => t.id === trayId)
+    if (tray) {
+      setActiveTray(tray)
+      // Haptic feedback on mobile
+      if (navigator.vibrate) {
+        navigator.vibrate(10)
       }
     }
-
-    // Normal placement not possible, try swap
-    const swapOption = findSwapOption(draggingTray.id, position)
-    
-    if (swapOption && swapOption.displacedTrays.length > 0) {
-      let dragToPositions: number[] = []
-      if (size === 4) {
-        const possibleStarts = getPossibleStartPositions(position)
-        if (possibleStarts.length > 0) {
-          const startPos = possibleStarts[0]
-          dragToPositions = calculateTrayPositions(startPos, size)
-        }
-      } else {
-        dragToPositions = [position]
-      }
-
-      const displacedTraysInfo = swapOption.displacedTrays.map(displaced => {
-        const displacedTray = trays.find(t => t.id === displaced.trayId)
-        if (!displacedTray) return null
-        const displacedSize = getTraySize(displacedTray.type)
-        return {
-          trayId: displaced.trayId,
-          currentPositions: displacedTray.positions,
-          newPositions: calculateTrayPositions(displaced.newPosition, displacedSize)
-        }
-      }).filter((info): info is NonNullable<typeof info> => info !== null)
-
-      if (displacedTraysInfo.length === swapOption.displacedTrays.length) {
-        const newSwapPreview = {
-          dragToPositions,
-          displacedTraysInfo,
-          swapOption
-        }
-
-        if (!swapPreview || JSON.stringify(swapPreview) !== JSON.stringify(newSwapPreview)) {
-          setSwapPreview(newSwapPreview)
-          setDropPreview(null)
-        }
-        return
-      }
-    }
-
-    if (dropPreview) setDropPreview(null)
-    if (swapPreview) setSwapPreview(null)
   }
 
-  const handleTouchEnd = (_e: React.TouchEvent, position: number) => {
-    if (!draggingTray || !isTouchDragging) {
-      // If not dragging, treat as click
-      setTouchStartPos(null)
-      setDraggingTray(null)
-      setIsTouchDragging(false)
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event
+    if (!over || !activeTray) {
+      setDropPreview(null)
+      setSwapPreview(null)
       return
     }
 
-    // Handle drop
-    const size = getTraySize(draggingTray.type)
-    
-    // First, try normal placement
+    const position = parseInt(over.id as string, 10)
+
+    const size = getTraySize(activeTray.type)
+
+    // Try normal placement
     if (size === 4) {
       const possibleStarts = getPossibleStartPositions(position)
       for (const startPosition of possibleStarts) {
-        if (canPlaceTray(startPosition, size, draggingTray.id)) {
-          onMoveTray(draggingTray.id, startPosition)
-          setDraggingTray(null)
-          setDropPreview(null)
+        if (canPlaceTray(startPosition, size, activeTray.id)) {
+          setDropPreview(calculateTrayPositions(startPosition, size))
           setSwapPreview(null)
-          setTouchStartPos(null)
-          setIsTouchDragging(false)
           return
         }
       }
     } else {
-      if (canPlaceTray(position, size, draggingTray.id)) {
-        onMoveTray(draggingTray.id, position)
-        setDraggingTray(null)
-        setDropPreview(null)
+      if (canPlaceTray(position, size, activeTray.id)) {
+        setDropPreview([position])
         setSwapPreview(null)
-        setTouchStartPos(null)
-        setIsTouchDragging(false)
         return
       }
     }
 
-    // Try swap if we have a swap preview active
-    if (swapPreview && swapPreview.swapOption.displacedTrays.length > 0) {
-      const dragToStart = swapPreview.dragToPositions[0]
-      onSwapTrays(
-        draggingTray.id,
-        dragToStart,
-        swapPreview.swapOption.displacedTrays
-      )
-    }
-
-    setDraggingTray(null)
-    setDropPreview(null)
-    setSwapPreview(null)
-    setTouchStartPos(null)
-    setIsTouchDragging(false)
-  }
-
-  const handleDragOver = (e: React.DragEvent, position: number) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    
-    if (!draggingTray) return
-
-    const size = getTraySize(draggingTray.type)
-    
-    // First, try normal placement
-    if (size === 4) {
-      const possibleStarts = getPossibleStartPositions(position)
-      for (const startPosition of possibleStarts) {
-        if (canPlaceTray(startPosition, size, draggingTray.id)) {
-          const newPreview = calculateTrayPositions(startPosition, size)
-          if (!dropPreview || JSON.stringify(dropPreview) !== JSON.stringify(newPreview)) {
-            setDropPreview(newPreview)
-            setSwapPreview(null)
-          }
-          return
-        }
-      }
-    } else {
-      if (canPlaceTray(position, size, draggingTray.id)) {
-        if (!dropPreview || dropPreview[0] !== position) {
-          setDropPreview([position])
-          setSwapPreview(null)
-        }
-        return
-      }
-    }
-
-    // Normal placement not possible, try swap
-    const swapOption = findSwapOption(draggingTray.id, position)
-    
+    // Try swap
+    const swapOption = findSwapOption(activeTray.id, position)
     if (swapOption && swapOption.displacedTrays.length > 0) {
-      // Calculate where the dragging tray will go
       let dragToPositions: number[] = []
       if (size === 4) {
         const possibleStarts = getPossibleStartPositions(position)
         if (possibleStarts.length > 0) {
-          const startPos = possibleStarts[0]
-          dragToPositions = calculateTrayPositions(startPos, size)
+          dragToPositions = calculateTrayPositions(possibleStarts[0], size)
         }
       } else {
         dragToPositions = [position]
       }
 
-      // Build info for all displaced trays
       const displacedTraysInfo = swapOption.displacedTrays.map(displaced => {
         const displacedTray = trays.find(t => t.id === displaced.trayId)
         if (!displacedTray) return null
-        const displacedSize = getTraySize(displacedTray.type)
         return {
           trayId: displaced.trayId,
           currentPositions: displacedTray.positions,
-          newPositions: calculateTrayPositions(displaced.newPosition, displacedSize)
+          newPositions: calculateTrayPositions(displaced.newPosition, getTraySize(displacedTray.type))
         }
       }).filter((info): info is NonNullable<typeof info> => info !== null)
 
       if (displacedTraysInfo.length === swapOption.displacedTrays.length) {
-        const newSwapPreview = {
-          dragToPositions,
-          displacedTraysInfo,
-          swapOption
-        }
-
-        if (!swapPreview || JSON.stringify(swapPreview) !== JSON.stringify(newSwapPreview)) {
-          setSwapPreview(newSwapPreview)
-          setDropPreview(null)
-        }
-        return
-      }
-    }
-
-    // No valid placement or swap
-    if (dropPreview) setDropPreview(null)
-    if (swapPreview) setSwapPreview(null)
-  }
-
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-  }
-
-  const handleDrop = (e: React.DragEvent, position: number) => {
-    e.preventDefault()
-    if (!draggingTray) return
-
-    const size = getTraySize(draggingTray.type)
-    
-    // First, try normal placement
-    if (size === 4) {
-      const possibleStarts = getPossibleStartPositions(position)
-      for (const startPosition of possibleStarts) {
-        if (canPlaceTray(startPosition, size, draggingTray.id)) {
-          onMoveTray(draggingTray.id, startPosition)
-          setDraggingTray(null)
-          setDropPreview(null)
-          setSwapPreview(null)
-          return
-        }
-      }
-    } else {
-      if (canPlaceTray(position, size, draggingTray.id)) {
-        onMoveTray(draggingTray.id, position)
-        setDraggingTray(null)
+        setSwapPreview({ dragToPositions, displacedTraysInfo, swapOption })
         setDropPreview(null)
-        setSwapPreview(null)
         return
       }
     }
 
-    // Try swap if we have a swap preview active
-    if (swapPreview && swapPreview.swapOption.displacedTrays.length > 0) {
-      const dragToStart = swapPreview.dragToPositions[0]
-      onSwapTrays(
-        draggingTray.id,
-        dragToStart,
-        swapPreview.swapOption.displacedTrays
-      )
-    }
-
-    setDraggingTray(null)
     setDropPreview(null)
     setSwapPreview(null)
   }
 
-  return (
-    <div className="sink-wrapper">
-      <div className="sink-title">
-        <h2>Boiling Water Sink</h2>
-        <p>Tap empty positions to place trays • Drag or long-press trays to rearrange</p>
-      </div>
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { over } = event
+    
+    if (over && activeTray) {
+      const position = parseInt(over.id as string, 10)
+      const size = getTraySize(activeTray.type)
+
+      let moved = false
+
+      // Try normal placement first (only if dropPreview is active)
+      if (dropPreview && dropPreview.length > 0) {
+        const startPosition = dropPreview[0]
+        if (canPlaceTray(startPosition, size, activeTray.id)) {
+          onMoveTray(activeTray.id, startPosition)
+          moved = true
+        }
+      }
       
-      <div className={`sink ${draggingTray ? 'is-dragging-mode' : ''} ${isTouchDragging ? 'is-touch-dragging' : ''}`}>
-        {Array.from({ length: 8 }, (_, index) => {
-          const tray = getTrayAtPosition(index)
-          const isPreview = previewPositions?.includes(index)
-          const isStartOfTray = tray && tray.positions[0] === index
-          const isPreviewStart = isPreview && previewPositions && previewPositions[0] === index
-          
-          // For extra large trays, identify if this position is part of the tray
-          const isPartOfExtraLargeTray = tray && tray.type === 'extraLarge' && tray.positions.includes(index) && !isStartOfTray
-          const isPartOfPreviewExtraLarge = isPreview && previewPositions && previewPositions.length === 4 && previewPositions.includes(index) && previewPositions[0] !== index
-          const isExtraLargeStart = (tray?.type === 'extraLarge' && isStartOfTray) || (isPreviewStart && selectedTrayType === 'extraLarge')
+      // If normal placement didn't work, try based on position
+      if (!moved && !swapPreview) {
+        if (size === 4) {
+          const possibleStarts = getPossibleStartPositions(position)
+          for (const startPosition of possibleStarts) {
+            if (canPlaceTray(startPosition, size, activeTray.id)) {
+              onMoveTray(activeTray.id, startPosition)
+              moved = true
+              break
+            }
+          }
+        } else {
+          if (canPlaceTray(position, size, activeTray.id)) {
+            onMoveTray(activeTray.id, position)
+            moved = true
+          }
+        }
+      }
 
-          // Drop preview styling
-          const isDropPreview = dropPreview?.includes(index)
-          const isDropPreviewStart = dropPreview && dropPreview[0] === index
-          const isDropPreviewPart = isDropPreview && !isDropPreviewStart
-          const isDragging = draggingTray && tray && draggingTray.id === tray.id
+      // Try swap ONLY if normal placement didn't happen and swap preview is active
+      if (!moved && swapPreview && swapPreview.swapOption.displacedTrays.length > 0) {
+        const dragToStart = swapPreview.dragToPositions[0]
+        onSwapTrays(activeTray.id, dragToStart, swapPreview.swapOption.displacedTrays)
+      }
+    }
 
-          // Swap preview styling - now handles multiple displaced trays
-          const isSwapDragTarget = swapPreview?.dragToPositions.includes(index)
-          const isSwapDragTargetStart = swapPreview && swapPreview.dragToPositions[0] === index
-          
-          // Check if position is part of any displaced tray's current position
-          const isSwapBlockingCurrent = swapPreview?.displacedTraysInfo.some(
-            info => info.currentPositions.includes(index)
-          )
-          
-          // Check if position is part of any displaced tray's new position
-          const isSwapBlockingNew = swapPreview?.displacedTraysInfo.some(
-            info => info.newPositions.includes(index)
-          )
-          
-          // Check if position is the START of any displaced tray's new position
-          const isSwapBlockingNewStart = swapPreview?.displacedTraysInfo.some(
-            info => info.newPositions[0] === index
-          )
+    // Reset state
+    setActiveTray(null)
+    setDropPreview(null)
+    setSwapPreview(null)
+  }
 
-          // Only disable pointer events if this position is part of an existing tray (not preview) and not in drag mode
-          const shouldDisablePointer = isPartOfExtraLargeTray && !isPreview && !draggingTray
-          
+  const previewPositions = hoveredPosition !== null && !activeTray ? getHoverPreview(hoveredPosition) : null
+
+  // Render a tray card (used for both regular rendering and drag overlay)
+  const renderTrayCard = (tray: Tray, isOverlay = false) => (
+    <div className={`tray tray-${tray.type} ${isOverlay ? 'tray-overlay' : ''}`}>
+      <div className="tray-header">
+        <span className="drag-handle" title="Drag to move">⋮⋮</span>
+        <span className="tray-label">{getTrayLabel(tray)}</span>
+        {!isOverlay && (
+          <button
+            className="remove-tray-btn"
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemoveTray(tray.id)
+            }}
+            title="Remove tray"
+          >
+            ×
+          </button>
+        )}
+      </div>
+      <div className="pastas-list">
+        {tray.pastas.map((pasta) => {
+          const remaining = getRemainingTime(pasta)
+          const progress = getProgress(pasta)
+          const isDone = remaining === 0
+
           return (
-            <div
-              key={index}
-              className={`sink-position ${tray && !isDragging ? 'occupied' : ''} ${isPreviewStart ? 'preview' : ''} ${isPartOfPreviewExtraLarge ? 'preview-part' : ''} ${isExtraLargeStart && !isDragging ? 'extra-large-tray' : ''} ${isPartOfExtraLargeTray && !isDragging ? 'extra-large-part' : ''} ${isDropPreviewStart ? 'drop-preview' : ''} ${isDropPreviewPart ? 'drop-preview-part' : ''} ${isDragging ? 'dragging' : ''} ${isSwapDragTargetStart ? 'swap-drag-target' : ''} ${isSwapDragTarget && !isSwapDragTargetStart ? 'swap-drag-target-part' : ''} ${isSwapBlockingCurrent ? 'swap-blocking-current' : ''} ${isSwapBlockingNewStart ? 'swap-blocking-new' : ''} ${isSwapBlockingNew && !isSwapBlockingNewStart ? 'swap-blocking-new-part' : ''}`}
-              onMouseEnter={() => !draggingTray && setHoveredPosition(index)}
-              onMouseLeave={() => !draggingTray && setHoveredPosition(null)}
-              onClick={() => !shouldDisablePointer && !draggingTray && handlePositionClick(index)}
-              onDragEnter={handleDragEnter}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDrop={(e) => handleDrop(e, index)}
-              onTouchMove={(e) => draggingTray && handleTouchMove(e, index)}
-              onTouchEnd={(e) => draggingTray && handleTouchEnd(e, index)}
-            >
-              {isStartOfTray && (
-                <div 
-                  className={`tray-container ${isDragging ? 'is-dragging' : ''}`}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, tray)}
-                  onDragEnd={handleDragEnd}
-                  onTouchStart={(e) => handleTouchStart(e, tray)}
-                  onTouchMove={(e) => handleTouchMove(e, index)}
-                  onTouchEnd={(e) => handleTouchEnd(e, index)}
-                >
-                  <div className={`tray tray-${tray.type}`}>
-                    <div className="tray-header">
-                      <span className="drag-handle" title="Drag to move">⋮⋮</span>
-                      <span className="tray-label">{getTrayLabel(tray)}</span>
-                      <button
-                        className="remove-tray-btn"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onRemoveTray(tray.id)
-                        }}
-                        title="Remove tray"
-                      >
-                        ×
-                      </button>
-                    </div>
-                    <div className="pastas-list">
-                      {tray.pastas.map((pasta) => {
-                        const remaining = getRemainingTime(pasta)
-                        const progress = getProgress(pasta)
-                        const isDone = remaining === 0
-
-                        return (
-                          <div
-                            key={pasta.id}
-                            className={`pasta-item ${isDone ? 'done' : ''}`}
-                          >
-                            <div className="pasta-header">
-                              <span className="pasta-name">{pasta.name}</span>
-                              <button
-                                className="remove-pasta-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  onRemovePasta(tray.id, pasta.id)
-                                }}
-                                title="Remove pasta"
-                              >
-                                ×
-                              </button>
-                            </div>
-                            <div className="timer-display">
-                              {isDone ? (
-                                <span className="timer-done">DONE! 🎉</span>
-                              ) : (
-                                <span className="timer-countdown">
-                                  {formatTime(remaining)}
-                                </span>
-                              )}
-                            </div>
-                            <div className="progress-bar">
-                              <div
-                                className="progress-fill"
-                                style={{ width: `${progress}%` }}
-                              />
-                            </div>
-                            <div className="pasta-info">
-                              {formatTime(pasta.cookingTime)} total
-                            </div>
-                          </div>
-                        )
-                      })}
-                      {tray.pastas.length === 0 && (
-                        <div className="empty-tray">Empty tray</div>
-                      )}
-                      {tray.type === 'large' && tray.pastas.length < 2 && (
-                        <div className="tray-capacity">
-                          Can hold {2 - tray.pastas.length} more pasta
-                        </div>
-                      )}
-                      {tray.type === 'extraLarge' && tray.pastas.length < 6 && (
-                        <div className="tray-capacity">
-                          Can hold {6 - tray.pastas.length} more pasta{tray.pastas.length < 5 ? 's' : ''}
-                        </div>
-                      )}
-                    </div>
+            <div key={pasta.id} className={`pasta-item ${isDone ? 'done' : ''}`}>
+              <div className="pasta-header">
+                <span className="pasta-name">{pasta.name}</span>
+                {!isOverlay && (
+                  <button
+                    className="remove-pasta-btn"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onRemovePasta(tray.id, pasta.id)
+                    }}
+                    title="Remove pasta"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              <div className="timer-display">
+                {isDone ? (
+                  <span className="timer-done">DONE! 🎉</span>
+                ) : (
+                  <span className="timer-countdown">{formatTime(remaining)}</span>
+                )}
+              </div>
+              {!isOverlay && (
+                <>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${progress}%` }} />
                   </div>
-                </div>
-              )}
-              {!tray && !isPreview && !isDropPreview && (
-                <div className="position-number">{index + 1}</div>
-              )}
-              {isPreviewStart && !tray && !draggingTray && (
-                <div className="preview-indicator">
-                  {selectedTrayType === 'regular' && 'Regular'}
-                  {selectedTrayType === 'large' && 'Large (2x)'}
-                  {selectedTrayType === 'extraLarge' && 'Extra Large (6x)'}
-                </div>
-              )}
-              {isSwapDragTargetStart && !tray && (
-                <div className="swap-indicator swap-drop-here">
-                  ↓ Drop here
-                </div>
-              )}
-              {isSwapBlockingNewStart && !isSwapBlockingCurrent && (
-                <div className="swap-indicator swap-move-here">
-                  ← Moves here
-                </div>
+                  <div className="pasta-info">{formatTime(pasta.cookingTime)} total</div>
+                </>
               )}
             </div>
           )
         })}
+        {tray.pastas.length === 0 && <div className="empty-tray">Empty tray</div>}
+        {!isOverlay && tray.type === 'large' && tray.pastas.length < 2 && (
+          <div className="tray-capacity">Can hold {2 - tray.pastas.length} more pasta</div>
+        )}
+        {!isOverlay && tray.type === 'extraLarge' && tray.pastas.length < 6 && (
+          <div className="tray-capacity">
+            Can hold {6 - tray.pastas.length} more pasta{tray.pastas.length < 5 ? 's' : ''}
+          </div>
+        )}
       </div>
+    </div>
+  )
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="sink-wrapper">
+        <div className="sink-title">
+          <h2>Boiling Water Sink</h2>
+          <p>Tap empty positions to place trays • Drag trays to rearrange</p>
+        </div>
+
+        <div className={`sink ${activeTray ? 'is-dragging-mode' : ''}`}>
+          {Array.from({ length: 8 }, (_, index) => {
+            const tray = getTrayAtPosition(index)
+            const isPreview = previewPositions?.includes(index)
+            const isStartOfTray = tray && tray.positions[0] === index
+            const isPreviewStart = isPreview && previewPositions && previewPositions[0] === index
+
+            const isPartOfExtraLargeTray = tray && tray.type === 'extraLarge' && tray.positions.includes(index) && !isStartOfTray
+            const isPartOfPreviewExtraLarge = isPreview && previewPositions && previewPositions.length === 4 && previewPositions.includes(index) && previewPositions[0] !== index
+            const isExtraLargeStart = (tray?.type === 'extraLarge' && isStartOfTray) || (isPreviewStart && selectedTrayType === 'extraLarge')
+
+            const isDropPreview = dropPreview?.includes(index)
+            const isDropPreviewStart = dropPreview && dropPreview[0] === index
+            const isDropPreviewPart = isDropPreview && !isDropPreviewStart
+            const isDragging = activeTray && tray && activeTray.id === tray.id
+
+            const isSwapDragTarget = swapPreview?.dragToPositions.includes(index)
+            const isSwapDragTargetStart = swapPreview && swapPreview.dragToPositions[0] === index
+            const isSwapBlockingCurrent = swapPreview?.displacedTraysInfo.some(info => info.currentPositions.includes(index))
+            const isSwapBlockingNew = swapPreview?.displacedTraysInfo.some(info => info.newPositions.includes(index))
+            const isSwapBlockingNewStart = swapPreview?.displacedTraysInfo.some(info => info.newPositions[0] === index)
+
+            const shouldDisablePointer = isPartOfExtraLargeTray && !isPreview && !activeTray
+
+            // Disable droppable for positions that are part of extra-large tray but not the start
+            // EXCEPT when dragging that same tray (we need to detect those positions for preview)
+            const isPartOfDraggingTray = activeTray && tray && activeTray.id === tray.id
+            const isDisabledDroppable = isPartOfExtraLargeTray && !isStartOfTray && !isPartOfDraggingTray
+
+            return (
+              <DroppablePosition
+                key={index}
+                id={index.toString()}
+                dataPosition={index}
+                disabled={isDisabledDroppable}
+                className={`sink-position 
+                  ${tray && !isDragging ? 'occupied' : ''} 
+                  ${isPreviewStart ? 'preview' : ''} 
+                  ${isPartOfPreviewExtraLarge ? 'preview-part' : ''} 
+                  ${isExtraLargeStart && !isDragging ? 'extra-large-tray' : ''} 
+                  ${isPartOfExtraLargeTray && !isDragging ? 'extra-large-part' : ''} 
+                  ${isDropPreviewStart ? 'drop-preview' : ''} 
+                  ${isDropPreviewPart ? 'drop-preview-part' : ''} 
+                  ${isDragging ? 'dragging' : ''} 
+                  ${isSwapDragTargetStart ? 'swap-drag-target' : ''} 
+                  ${isSwapDragTarget && !isSwapDragTargetStart ? 'swap-drag-target-part' : ''} 
+                  ${isSwapBlockingCurrent ? 'swap-blocking-current' : ''} 
+                  ${isSwapBlockingNewStart ? 'swap-blocking-new' : ''} 
+                  ${isSwapBlockingNew && !isSwapBlockingNewStart ? 'swap-blocking-new-part' : ''}
+                `}
+                onMouseEnter={() => !activeTray && setHoveredPosition(index)}
+                onMouseLeave={() => !activeTray && setHoveredPosition(null)}
+                onClick={() => !shouldDisablePointer && !activeTray ? handlePositionClick(index) : undefined}
+              >
+                {isStartOfTray && (
+                  <DraggableTray tray={tray} isDragging={!!isDragging}>
+                    {renderTrayCard(tray)}
+                  </DraggableTray>
+                )}
+                {!tray && !isPreview && !isDropPreview && (
+                  <div className="position-number">{index + 1}</div>
+                )}
+                {isPreviewStart && !tray && !activeTray && (
+                  <div className="preview-indicator">
+                    {selectedTrayType === 'regular' && 'Regular'}
+                    {selectedTrayType === 'large' && 'Large (2x)'}
+                    {selectedTrayType === 'extraLarge' && 'Extra Large (6x)'}
+                  </div>
+                )}
+                {isSwapDragTargetStart && !tray && (
+                  <div className="swap-indicator swap-drop-here">↓ Drop here</div>
+                )}
+                {isSwapBlockingNewStart && !isSwapBlockingCurrent && (
+                  <div className="swap-indicator swap-move-here">← Moves here</div>
+                )}
+              </DroppablePosition>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Drag overlay - follows cursor/finger smoothly */}
+      <DragOverlay dropAnimation={{
+        duration: 200,
+        easing: 'ease-out',
+      }}>
+        {activeTray && (
+          <div className="drag-overlay-tray">
+            {renderTrayCard(activeTray, true)}
+          </div>
+        )}
+      </DragOverlay>
+    </DndContext>
+  )
+}
+
+// Droppable position component - renders a full-size droppable cell
+import { useDroppable } from '@dnd-kit/core'
+
+function DroppablePosition({ 
+  id, 
+  children, 
+  disabled,
+  className,
+  onClick,
+  onMouseEnter,
+  onMouseLeave,
+  dataPosition
+}: { 
+  id: string
+  children: React.ReactNode
+  disabled?: boolean
+  className?: string
+  onClick?: () => void
+  onMouseEnter?: () => void
+  onMouseLeave?: () => void
+  dataPosition?: number
+}) {
+  const { setNodeRef, isOver } = useDroppable({ 
+    id,
+    disabled: disabled 
+  })
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      id={id}
+      data-position={dataPosition}
+      className={`${className} ${isOver && !disabled ? 'drag-over' : ''}`}
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      {children}
+    </div>
+  )
+}
+
+// Draggable tray component
+import { useDraggable } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
+
+function DraggableTray({ tray, isDragging, children }: { tray: Tray; isDragging: boolean; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: tray.id,
+  })
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.3 : 1,
+    transition: isDragging ? 'opacity 0.2s ease' : undefined,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`tray-container ${isDragging ? 'is-dragging' : ''}`}
+      {...listeners}
+      {...attributes}
+    >
+      {children}
     </div>
   )
 }
 
 export default Sink
-
