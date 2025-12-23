@@ -158,30 +158,6 @@ function App() {
     }))
   }
 
-  // Find valid positions where a tray can be moved to (for swap operations)
-  const findValidPositionsForTray = (trayType: 'regular' | 'large' | 'extraLarge', excludeTrayIds: string[]): number[] => {
-    const size = getTraySize(trayType)
-    const validPositions: number[] = []
-    
-    if (size === 4) {
-      // Extra large tray: check start positions 0, 1, 2
-      for (let pos = 0; pos <= 2; pos++) {
-        if (canPlaceTrayWithExclusions(pos, size, excludeTrayIds)) {
-          validPositions.push(pos)
-        }
-      }
-    } else {
-      // Regular and large: check all 8 positions
-      for (let pos = 0; pos <= 7; pos++) {
-        if (canPlaceTrayWithExclusions(pos, size, excludeTrayIds)) {
-          validPositions.push(pos)
-        }
-      }
-    }
-    
-    return validPositions
-  }
-
   // Extended canPlaceTray that can exclude multiple trays
   const canPlaceTrayWithExclusions = (startPosition: number, size: number, excludeTrayIds: string[]): boolean => {
     if (size === 4) {
@@ -284,9 +260,6 @@ function App() {
     
     // Calculate which positions will be freed by the dragging tray
     const freedPositions = draggingTray.positions
-    
-    // Calculate which positions will be taken by dragging tray
-    const takenPositions = new Set(dragTargetPositions)
     
     // Try to find valid positions for ALL displaced trays
     // We need to assign each displaced tray a new position that:
