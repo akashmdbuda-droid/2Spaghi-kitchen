@@ -11,10 +11,10 @@
 }
 
 .mobile-pasta-section-label {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #374151;
-  text-transform: uppercase;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--color-primary);
+  font-family: var(--font-header);
   letter-spacing: 0.5px;
   margin-bottom: 12px;
   padding: 0 4px;
@@ -32,7 +32,7 @@
   align-items: center;
   padding: 12px 8px;
   border: 2px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: white;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -42,8 +42,8 @@
 
 .mobile-pasta-card:active {
   transform: scale(0.95);
-  border-color: #667eea;
-  background: #f9fafb;
+  border-color: var(--color-primary);
+  background: var(--color-bg-secondary);
 }
 
 .mobile-pasta-image {
@@ -77,6 +77,9 @@
   line-height: 1.2;
   margin-bottom: 4px;
   word-break: break-word;
+  font-family: var(--font-header);
+  font-weight: 400;
+  font-size: 0.9rem;
 }
 
 .mobile-pasta-time {
@@ -248,7 +251,7 @@
 .confirm-start-btn {
   width: 100%;
   padding: 16px;
-  background: #10b981;
+  background: var(--color-accent);
   color: white;
   border: none;
   border-radius: 12px;
@@ -260,6 +263,6 @@
 }
 
 .confirm-start-btn:active {
-  background: #059669;
+  background: var(--color-primary);
   transform: scale(0.98);
 }

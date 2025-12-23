@@ -11,38 +11,45 @@
     gap: 0;
     overflow: hidden;
   }
-  
+
   .app-header {
-    display: none; /* Hide header on mobile to maximize space */
+    display: none;
+    /* Hide header on mobile to maximize space */
   }
 }
 
 .app-header {
   text-align: center;
-  color: white;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  color: var(--color-text-header);
+  padding: 30px 20px;
+  background: white;
+  margin-bottom: 2rem;
+  border-bottom: 3px double var(--color-primary);
+  /* The signature double line keyline */
 }
 
 .app-header h1 {
-  font-size: 2.5rem;
-  margin-bottom: 8px;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  font-family: var(--font-header);
+  font-size: 3.5rem;
+  margin-bottom: 12px;
+  color: var(--color-primary);
+  font-weight: normal;
+  /* Script fonts are bold by nature usually */
+  text-shadow: none;
 }
 
 .app-header p {
   font-size: 1.1rem;
-  opacity: 0.9;
+  color: var(--color-text-light);
+  font-weight: 300;
+  letter-spacing: 0.5px;
 }
 
 @media (max-width: 768px) {
   .app-header h1 {
     font-size: 1.8rem;
   }
-  
+
   .app-header p {
     font-size: 0.95rem;
   }
@@ -50,11 +57,11 @@
 
 @media (max-width: 480px) {
   .app-header h1 {
-    font-size: 1.5rem;
+    font-size: 2rem;
   }
-  
+
   .app-header p {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
   }
 }
 
@@ -90,11 +97,11 @@
   .app-content {
     grid-template-columns: 1fr;
   }
-  
+
   .sink-container {
     order: 1;
   }
-  
+
   .right-panel {
     order: 2;
   }
@@ -108,11 +115,12 @@
     gap: 0;
     overflow: hidden;
   }
-  
+
   .app-controls {
-    display: none; /* Hide dropdown on mobile - use modal instead */
+    display: none;
+    /* Hide dropdown on mobile - use modal instead */
   }
-  
+
   .sink-container {
     flex: 1;
     overflow: auto;
@@ -120,9 +128,10 @@
     display: flex;
     flex-direction: column;
   }
-  
+
   .right-panel {
-    display: none; /* Hide pasta form on mobile - use modal instead */
+    display: none;
+    /* Hide pasta form on mobile - use modal instead */
   }
 }
 
@@ -130,9 +139,8 @@
   .app-controls {
     padding: 8px;
   }
-  
+
   .sink-container {
     padding: 4px;
   }
 }
-

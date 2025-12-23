@@ -5,7 +5,7 @@ import './PastaForm.css'
 
 interface PastaFormProps {
   trays: Tray[]
-  onAddPasta: (trayId: string, pasta: { name: string; cookingTime: number; trayType: 'regular' | 'large' | 'extraLarge' }) => void
+  onAddPasta: (trayId: string, pasta: { name: string; cookingTime: number; trayType: 'regular' | 'large' | 'extraLarge'; imageUrl?: string }) => void
   autoSelectTrayId?: string // Auto-select this tray when provided
 }
 
@@ -50,7 +50,7 @@ const PastaForm = ({ trays, onAddPasta, autoSelectTrayId }: PastaFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!selectedTrayId || !pastaName.trim()) {
       return
     }
@@ -76,10 +76,14 @@ const PastaForm = ({ trays, onAddPasta, autoSelectTrayId }: PastaFormProps) => {
     const selectedTray = trays.find(t => t.id === selectedTrayId)
     if (!selectedTray) return
 
+    // Get image URL from preset if available
+    const preset = getPastaPreset(pastaName.trim())
+
     onAddPasta(selectedTrayId, {
       name: pastaName.trim(),
       cookingTime: totalSeconds,
-      trayType: selectedTray.type
+      trayType: selectedTray.type,
+      imageUrl: preset?.imageUrl
     })
 
     // Reset form but keep tray selected if it still has capacity
@@ -91,7 +95,7 @@ const PastaForm = ({ trays, onAddPasta, autoSelectTrayId }: PastaFormProps) => {
         setSelectedTrayId('')
       }
     }
-    
+
     setPastaName('')
     setSelectedPreset('')
     setCookingTimeMinutes(4)
@@ -111,7 +115,7 @@ const PastaForm = ({ trays, onAddPasta, autoSelectTrayId }: PastaFormProps) => {
   return (
     <div className="pasta-form">
       <h3>Add Pasta to Tray</h3>
-      
+
       {availableTrays.length === 0 ? (
         <div className="no-trays-message">
           <p>No available trays. Place a tray in the sink first!</p>
@@ -159,8 +163,8 @@ const PastaForm = ({ trays, onAddPasta, autoSelectTrayId }: PastaFormProps) => {
                   >
                     <div className="pasta-preset-image">
                       {preset.imageUrl ? (
-                        <img 
-                          src={preset.imageUrl} 
+                        <img
+                          src={preset.imageUrl}
                           alt={preset.name}
                           onError={(e) => {
                             // Fallback to emoji if image fails
@@ -187,7 +191,7 @@ const PastaForm = ({ trays, onAddPasta, autoSelectTrayId }: PastaFormProps) => {
                   </button>
                 ))}
               </div>
-              
+
               <div className="pasta-preset-group">
                 <div className="pasta-preset-group-label">Ravioli</div>
                 <div className="pasta-preset-grid ravioli-grid">
@@ -207,8 +211,8 @@ const PastaForm = ({ trays, onAddPasta, autoSelectTrayId }: PastaFormProps) => {
                     >
                       <div className="pasta-preset-image">
                         {preset.imageUrl ? (
-                          <img 
-                            src={preset.imageUrl} 
+                          <img
+                            src={preset.imageUrl}
                             alt={preset.name}
                             onError={(e) => {
                               const target = e.target as HTMLImageElement

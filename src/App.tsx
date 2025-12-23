@@ -4,6 +4,7 @@ import TrayDropdown from './components/TrayDropdown'
 import PastaForm from './components/PastaForm'
 import MobileTrayModal from './components/MobileTrayModal'
 import MobilePastaModal from './components/MobilePastaModal'
+import { getPastaPreset } from './data/pastaPresets'
 import './App.css'
 
 export interface Pasta {
@@ -12,6 +13,7 @@ export interface Pasta {
   cookingTime: number // in seconds
   startTime: number // timestamp
   trayType: 'regular' | 'large' | 'extraLarge'
+  imageUrl?: string
 }
 
 export interface Tray {
@@ -212,7 +214,8 @@ function App() {
       handleAddPasta(newlyAddedTrayId, {
         name,
         cookingTime,
-        trayType: pendingTrayType || 'regular'
+        trayType: pendingTrayType || 'regular',
+        imageUrl: getPastaPreset(name)?.imageUrl
       })
       setPendingTrayType(null)
       setNewlyAddedTrayId(null)
