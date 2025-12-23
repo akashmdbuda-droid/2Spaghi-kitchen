@@ -9,7 +9,9 @@
   .app {
     height: 100vh;
     gap: 0;
-    overflow: hidden;
+    overflow-y: auto;
+    /* Allow scrolling on mobile */
+    overflow-x: hidden;
   }
 
   .app-header {
