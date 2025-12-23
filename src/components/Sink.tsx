@@ -64,9 +64,6 @@ const Sink = ({
     swapOption: SwapOption
   } | null>(null)
 
-  // Track announced pastas to prevent repeated speech
-  const [announcedPastaIds, setAnnouncedPastaIds] = useState<Set<string>>(new Set())
-
   // Configure sensors for both mouse and touch
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -120,35 +117,55 @@ const Sink = ({
     return possibleStarts
   }
 
+  const playBeep = () => {
+    // Check for AudioContext support
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioContext) return
+
+    try {
+      const ctx = new AudioContext()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+
+      osc.type = 'sine'
+      osc.frequency.value = 880 // A5
+      gain.gain.value = 0.1
+
+      osc.start()
+      osc.stop(ctx.currentTime + 0.15) // Short 150ms beep
+    } catch (e) {
+      console.error('Audio playback failed', e)
+    }
+  }
+
   // Update elapsed times every second
   useEffect(() => {
     const interval = setInterval(() => {
       const times: Record<string, number> = {}
-      const newAnnounced = new Set(announcedPastaIds)
-      let hasNewAnnouncement = false
+      let shouldBeep = false
 
       trays.forEach(tray => {
         tray.pastas.forEach(pasta => {
           const elapsed = Math.floor((Date.now() - pasta.startTime) / 1000)
           times[pasta.id] = elapsed
 
-          // Check for completion and announce
-          const remaining = pasta.cookingTime - elapsed // Can be negative now
+          // Check for completion
+          const remaining = pasta.cookingTime - elapsed
 
-          if (remaining <= 0 && !newAnnounced.has(pasta.id)) {
-            // Cancel any pending speech to ensure this one plays
-            window.speechSynthesis.cancel()
-            const utterance = new SpeechSynthesisUtterance(`${pasta.name} is ready`)
-            window.speechSynthesis.speak(utterance)
-            newAnnounced.add(pasta.id)
-            hasNewAnnouncement = true
+          // Beep every 3 seconds when overcooked (at 0, -3, -6, etc.)
+          if (remaining <= 0 && Math.abs(remaining) % 3 === 0) {
+            shouldBeep = true
           }
         })
       })
 
       setElapsedTimes(times)
-      if (hasNewAnnouncement) {
-        setAnnouncedPastaIds(newAnnounced)
+
+      if (shouldBeep) {
+        playBeep()
       }
     }, 1000)
 

@@ -101,19 +101,165 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
   }
-  
+
   .mobile-pasta-image {
     width: 60px;
     height: 60px;
   }
-  
+
   .mobile-pasta-name {
     font-size: 0.7rem;
   }
-  
+
   .ravioli-card .mobile-pasta-image {
     width: 65px;
     height: 65px;
   }
 }
 
+
+.mobile-modal-back {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #374151;
+  cursor: pointer;
+  padding: 0 8px;
+  margin-right: -8px;
+  line-height: 1;
+}
+
+.time-confirm-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 12px;
+}
+
+.confirm-pasta-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.confirm-image {
+  width: 100px;
+  height: 100px;
+  background: #f9fafb;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 2px solid #e5e7eb;
+}
+
+.confirm-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.confirm-pasta-info h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #111827;
+}
+
+.time-editor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f3f4f6;
+  padding: 24px;
+  border-radius: 16px;
+}
+
+.time-input-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-input-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.number-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.number-control button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: #f3f4f6;
+  border-radius: 6px;
+  font-size: 1.2rem;
+  color: #374151;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.number-control button:active {
+  background: #e5e7eb;
+}
+
+.number-control input {
+  width: 48px;
+  text-align: center;
+  border: none;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #111827;
+  padding: 0;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.number-control input::-webkit-outer-spin-button,
+.number-control input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.time-separator {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #9ca3af;
+  margin-top: 20px;
+}
+
+.confirm-start-btn {
+  width: 100%;
+  padding: 16px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 12px;
+  box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+}
+
+.confirm-start-btn:active {
+  background: #059669;
+  transform: scale(0.98);
+}
