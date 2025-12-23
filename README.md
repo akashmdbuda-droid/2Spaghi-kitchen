@@ -4,7 +4,7 @@ A visual pasta cooking management application for commercial kitchens. Track mul
 
 ![Pasta Cook Timer](https://img.shields.io/badge/React-18-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue) ![Vite](https://img.shields.io/badge/Vite-5.0-purple)
 
-## ✨ Features
+## ✨ Features 
 
 - **Visual Sink Interface** - Top-down view of 8-position boiling water sink
 - **Multiple Tray Types**:
@@ -89,6 +89,51 @@ src/
 ## 📋 Documentation
 
 See [SPECIFICATIONS.md](./SPECIFICATIONS.md) for detailed technical specifications, data models, and feature documentation.
+
+## 🚀 Deployment
+
+This app can be deployed to various platforms. Here are the easiest options:
+
+### Option 1: Vercel (Recommended - Easiest)
+
+1. Push your code to GitHub
+2. Go to [vercel.com](https://vercel.com)
+3. Import your GitHub repository
+4. Vercel will auto-detect Vite and deploy automatically
+5. Your app will be live at `your-app.vercel.app`
+
+**One-click deploy:**
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/pasta-cook)
+
+### Option 2: Netlify
+
+1. Push your code to GitHub
+2. Go to [netlify.com](https://netlify.com)
+3. Click "New site from Git"
+4. Select your repository
+5. Build command: `npm run build`
+6. Publish directory: `dist`
+7. Deploy!
+
+**One-click deploy:**
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/yourusername/pasta-cook)
+
+### Option 3: GitHub Pages
+
+1. Push your code to GitHub
+2. Go to repository Settings → Pages
+3. Source: GitHub Actions
+4. The workflow will automatically deploy on every push to `main`
+
+### Option 4: Manual Deployment
+
+```bash
+# Build the app
+npm run build
+
+# The dist folder contains your production-ready app
+# Upload the contents of dist/ to any static hosting service
+```
 
 ## 📄 License
 
