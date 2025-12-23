@@ -31,7 +31,6 @@ interface SinkProps {
   onPlaceTray: (position: number, trayType?: 'regular' | 'large' | 'extraLarge') => void
   onMobilePositionTap?: (position: number) => void
   onRemoveTray: (trayId: string) => void
-  onRemovePasta: (trayId: string, pastaId: string) => void
   onMoveTray: (trayId: string, newPosition: number) => void
   onSwapTrays: (draggingTrayId: string, newDraggingPosition: number, displacedTrays: DisplacedTray[]) => void
   selectedTrayType: 'regular' | 'large' | 'extraLarge'
@@ -45,7 +44,6 @@ const Sink = ({
   onPlaceTray,
   onMobilePositionTap,
   onRemoveTray,
-  onRemovePasta,
   onMoveTray,
   onSwapTrays,
   selectedTrayType,

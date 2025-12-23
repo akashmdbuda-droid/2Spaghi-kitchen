@@ -246,17 +246,6 @@ function App() {
     setTrays(trays.filter(tray => tray.id !== trayId))
   }
 
-  const handleRemovePasta = (trayId: string, pastaId: string) => {
-    setTrays(trays.map(tray => {
-      if (tray.id === trayId) {
-        return {
-          ...tray,
-          pastas: tray.pastas.filter(p => p.id !== pastaId)
-        }
-      }
-      return tray
-    }))
-  }
 
   // Extended canPlaceTray that can exclude multiple trays
   const canPlaceTrayWithExclusions = (startPosition: number, size: number, excludeTrayIds: string[]): boolean => {
@@ -559,7 +548,6 @@ function App() {
             onPlaceTray={handlePlaceTray}
             onMobilePositionTap={handleMobilePositionTap}
             onRemoveTray={handleRemoveTray}
-            onRemovePasta={handleRemovePasta}
             onMoveTray={handleMoveTray}
             onSwapTrays={handleSwapTrays}
             selectedTrayType={selectedTrayType}
