@@ -64,6 +64,9 @@ const Sink = ({
     swapOption: SwapOption
   } | null>(null)
 
+  // Track announced pastas to prevent repeated speech
+  const [announcedPastaIds, setAnnouncedPastaIds] = useState<Set<string>>(new Set())
+
   // Configure sensors for both mouse and touch
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -106,14 +109,14 @@ const Sink = ({
   const getPossibleStartPositions = (position: number): number[] => {
     const possibleStarts: number[] = []
     const validStarts = getValidExtraLargeStartPositions()
-    
+
     for (const startPos of validStarts) {
       const blockPositions = calculateTrayPositions(startPos, 4)
       if (blockPositions.includes(position)) {
         possibleStarts.push(startPos)
       }
     }
-    
+
     return possibleStarts
   }
 
@@ -121,13 +124,32 @@ const Sink = ({
   useEffect(() => {
     const interval = setInterval(() => {
       const times: Record<string, number> = {}
+      const newAnnounced = new Set(announcedPastaIds)
+      let hasNewAnnouncement = false
+
       trays.forEach(tray => {
         tray.pastas.forEach(pasta => {
           const elapsed = Math.floor((Date.now() - pasta.startTime) / 1000)
           times[pasta.id] = elapsed
+
+          // Check for completion and announce
+          const remaining = pasta.cookingTime - elapsed // Can be negative now
+
+          if (remaining <= 0 && !newAnnounced.has(pasta.id)) {
+            // Cancel any pending speech to ensure this one plays
+            window.speechSynthesis.cancel()
+            const utterance = new SpeechSynthesisUtterance(`${pasta.name} is ready`)
+            window.speechSynthesis.speak(utterance)
+            newAnnounced.add(pasta.id)
+            hasNewAnnouncement = true
+          }
         })
       })
+
       setElapsedTimes(times)
+      if (hasNewAnnouncement) {
+        setAnnouncedPastaIds(newAnnounced)
+      }
     }, 1000)
 
     return () => clearInterval(interval)
@@ -153,7 +175,7 @@ const Sink = ({
 
   const getRemainingTime = (pasta: Pasta): number => {
     const elapsed = elapsedTimes[pasta.id] || 0
-    return Math.max(0, pasta.cookingTime - elapsed)
+    return pasta.cookingTime - elapsed
   }
 
   const getProgress = (pasta: Pasta): number => {
@@ -181,7 +203,7 @@ const Sink = ({
           return
         }
       }
-      
+
       const allStartPositions = getValidExtraLargeStartPositions()
       for (const startPosition of allStartPositions) {
         if (canPlaceTray(startPosition, size)) {
@@ -210,7 +232,7 @@ const Sink = ({
           return calculateTrayPositions(startPosition, size)
         }
       }
-      
+
       const allStartPositions = getValidExtraLargeStartPositions()
       for (const startPosition of allStartPositions) {
         if (canPlaceTray(startPosition, size)) {
@@ -305,7 +327,7 @@ const Sink = ({
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { over } = event
-    
+
     if (over && activeTray) {
       const position = parseInt(over.id as string, 10)
       const size = getTraySize(activeTray.type)
@@ -320,7 +342,7 @@ const Sink = ({
           moved = true
         }
       }
-      
+
       // If normal placement didn't work, try based on position
       if (!moved && !swapPreview) {
         if (size === 4) {
@@ -359,7 +381,7 @@ const Sink = ({
   const renderTrayCard = (tray: Tray, isOverlay = false) => (
     <div className={`tray tray-${tray.type} ${isOverlay ? 'tray-overlay' : ''}`}>
       <div className="tray-header">
-        <span className="drag-handle" title="Drag to move">⋮⋮</span>
+        {/* Drag handle removed visually, but entire card is draggable due to draggable listeners on container */}
         <span className="tray-label">{getTrayLabel(tray)}</span>
         {!isOverlay && (
           <button
@@ -376,9 +398,9 @@ const Sink = ({
       </div>
       <div className="pastas-list">
         {tray.pastas.map((pasta) => {
-          const remaining = getRemainingTime(pasta)
+          const remaining = getRemainingTime(pasta) // can be negative
           const progress = getProgress(pasta)
-          const isDone = remaining === 0
+          const isDone = remaining <= 0
 
           return (
             <div key={pasta.id} className={`pasta-item ${isDone ? 'done' : ''}`}>
@@ -399,7 +421,12 @@ const Sink = ({
               </div>
               <div className="timer-display">
                 {isDone ? (
-                  <span className="timer-done">DONE! 🎉</span>
+                  <div className="timer-status">
+                    <span className="timer-done">DONE!</span>
+                    <span className="timer-overcooked">
+                      +{formatTime(Math.abs(remaining))}
+                    </span>
+                  </div>
                 ) : (
                   <span className="timer-countdown">{formatTime(remaining)}</span>
                 )}
@@ -437,11 +464,6 @@ const Sink = ({
       onDragEnd={handleDragEnd}
     >
       <div className="sink-wrapper">
-        <div className="sink-title">
-          <h2>Boiling Water Sink</h2>
-          <p>Tap empty positions to place trays • Drag trays to rearrange</p>
-        </div>
-
         <div className={`sink ${activeTray ? 'is-dragging-mode' : ''}`}>
           {Array.from({ length: 8 }, (_, index) => {
             const tray = getTrayAtPosition(index)
@@ -541,16 +563,16 @@ const Sink = ({
 // Droppable position component - renders a full-size droppable cell
 import { useDroppable } from '@dnd-kit/core'
 
-function DroppablePosition({ 
-  id, 
-  children, 
+function DroppablePosition({
+  id,
+  children,
   disabled,
   className,
   onClick,
   onMouseEnter,
   onMouseLeave,
   dataPosition
-}: { 
+}: {
   id: string
   children: React.ReactNode
   disabled?: boolean
@@ -560,14 +582,14 @@ function DroppablePosition({
   onMouseLeave?: () => void
   dataPosition?: number
 }) {
-  const { setNodeRef, isOver } = useDroppable({ 
+  const { setNodeRef, isOver } = useDroppable({
     id,
-    disabled: disabled 
+    disabled: disabled
   })
 
   return (
-    <div 
-      ref={setNodeRef} 
+    <div
+      ref={setNodeRef}
       id={id}
       data-position={dataPosition}
       className={`${className} ${isOver && !disabled ? 'drag-over' : ''}`}

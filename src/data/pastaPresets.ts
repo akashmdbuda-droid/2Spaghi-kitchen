@@ -8,63 +8,66 @@ export interface PastaPreset {
 
 // Using placeholder images - replace with actual pasta images
 const getPastaImageUrl = (pastaName: string): string => {
-  return `/images/pasta/${pastaName}.png`
+  const baseUrl = import.meta.env.BASE_URL
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`
+  return `${cleanBaseUrl}images/pasta/${pastaName}.png`
 }
 
+
 export const pastaPresets: PastaPreset[] = [
-  { 
-    name: 'spaghetti', 
+  {
+    name: 'spaghetti',
     cookingTime: 4 * 60,
     emoji: '🍝',
     imageUrl: getPastaImageUrl('spaghetti')
   },
-  { 
-    name: 'tagliatelle', 
+  {
+    name: 'tagliatelle',
     cookingTime: 2 * 60,
     emoji: '🍜',
     imageUrl: getPastaImageUrl('tagliatelle')
   },
-  { 
-    name: 'sedanini', 
+  {
+    name: 'sedanini',
     cookingTime: 90,
     emoji: '🍝',
     imageUrl: getPastaImageUrl('sedanini')
   },
-  { 
-    name: 'casarecho', 
+  {
+    name: 'casarecho',
     cookingTime: 3 * 60,
     emoji: '🍝',
     imageUrl: getPastaImageUrl('casarecho')
   },
-  { 
-    name: 'fusilli', 
+  {
+    name: 'fusilli',
     cookingTime: 2 * 60,
     emoji: '🍝',
     imageUrl: getPastaImageUrl('fusilli')
   },
-  { 
-    name: 'bucatini', 
+  {
+    name: 'bucatini',
     cookingTime: 3 * 60,
     emoji: '🍝',
     imageUrl: getPastaImageUrl('bucatini')
   },
-  { 
-    name: 'ravioli - brasato', 
-    cookingTime: 4 * 60, 
+  {
+    name: 'ravioli - brasato',
+    cookingTime: 4 * 60,
     category: 'ravioli',
     emoji: '🥟',
     imageUrl: getPastaImageUrl('ravioli-brasato')
   },
-  { 
-    name: 'ravioli - black truffle', 
-    cookingTime: 4 * 60, 
+  {
+    name: 'ravioli - black truffle',
+    cookingTime: 4 * 60,
     category: 'ravioli',
     emoji: '🥟',
     imageUrl: getPastaImageUrl('ravioli-black-truffle')
   },
-  { 
-    name: 'ravioli - spinach', 
-    cookingTime: 4 * 60, 
+  {
+    name: 'ravioli - spinach',
+    cookingTime: 4 * 60,
     category: 'ravioli',
     emoji: '🥟',
     imageUrl: getPastaImageUrl('ravioli-spinach')
