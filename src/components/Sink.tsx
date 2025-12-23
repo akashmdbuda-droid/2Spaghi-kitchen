@@ -10,7 +10,10 @@ import {
   DragOverEvent,
   DragEndEvent,
   closestCenter,
+  useDroppable,
+  useDraggable,
 } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 import { Tray, Pasta } from '../App'
 import './Sink.css'
 
@@ -53,6 +56,7 @@ const Sink = ({
   const [hoveredPosition, setHoveredPosition] = useState<number | null>(null)
   const [elapsedTimes, setElapsedTimes] = useState<Record<string, number>>({})
   const [activeTray, setActiveTray] = useState<Tray | null>(null)
+  const [expandedTrayId, setExpandedTrayId] = useState<string | null>(null)
   const [dropPreview, setDropPreview] = useState<number[] | null>(null)
   const [swapPreview, setSwapPreview] = useState<{
     dragToPositions: number[]
@@ -395,82 +399,90 @@ const Sink = ({
   const previewPositions = hoveredPosition !== null && !activeTray ? getHoverPreview(hoveredPosition) : null
 
   // Render a tray card (used for both regular rendering and drag overlay)
-  const renderTrayCard = (tray: Tray, isOverlay = false) => (
-    <div className={`tray tray-${tray.type} ${isOverlay ? 'tray-overlay' : ''}`}>
-      <div className="tray-header">
-        {/* Drag handle removed visually, but entire card is draggable due to draggable listeners on container */}
-        <span className="tray-label">{getTrayLabel(tray)}</span>
-        {!isOverlay && (
-          <button
-            className="remove-tray-btn"
-            onClick={(e) => {
-              e.stopPropagation()
-              onRemoveTray(tray.id)
-            }}
-            title="Remove tray"
-          >
-            ×
-          </button>
-        )}
-      </div>
-      <div className="pastas-list">
-        {tray.pastas.map((pasta) => {
-          const remaining = getRemainingTime(pasta) // can be negative
-          const progress = getProgress(pasta)
-          const isDone = remaining <= 0
+  const renderTrayCard = (tray: Tray, isOverlay = false) => {
+    const isExpanded = tray.id === expandedTrayId
 
-          return (
-            <div key={pasta.id} className={`pasta-item ${isDone ? 'done' : ''}`}>
-              <div className="pasta-header">
-                <span className="pasta-name">{pasta.name}</span>
-                {!isOverlay && (
-                  <button
-                    className="remove-pasta-btn"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onRemovePasta(tray.id, pasta.id)
-                    }}
-                    title="Remove pasta"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-              <div className="timer-display">
-                {isDone ? (
-                  <div className="timer-status">
-                    <span className="timer-done">DONE!</span>
-                    <span className="timer-overcooked">
-                      +{formatTime(Math.abs(remaining))}
-                    </span>
+    return (
+      <div
+        className={`tray tray-${tray.type} ${isOverlay ? 'tray-overlay' : ''} ${isExpanded ? 'expanded' : ''}`}
+        onClick={(e) => {
+          if (!isOverlay && !activeTray) {
+            e.stopPropagation()
+            setExpandedTrayId(prev => prev === tray.id ? null : tray.id)
+          }
+        }}
+      >
+        <div className="tray-header">
+          {/* Drag handle removed visually, but entire card is draggable due to draggable listeners on container */}
+          <span className="tray-label">{getTrayLabel(tray)}</span>
+          {!isOverlay && (
+            <button
+              className="remove-tray-btn"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRemoveTray(tray.id)
+              }}
+              title="Remove tray"
+            >
+              ×
+            </button>
+          )}
+        </div>
+        <div className="pastas-list">
+          {tray.pastas.map((pasta) => {
+            const remaining = getRemainingTime(pasta) // can be negative
+            const progress = getProgress(pasta)
+            const isDone = remaining <= 0
+
+            return (
+              <div
+                key={pasta.id}
+                className={`pasta-item ${isDone ? 'done' : ''}`}
+                style={{
+                  backgroundImage: pasta.imageUrl ? `url(${pasta.imageUrl})` : 'none',
+                }}
+              >
+                <div className="pasta-item-overlay">
+                  <div className="pasta-header">
+                    <span className="pasta-name">{pasta.name}</span>
                   </div>
-                ) : (
-                  <span className="timer-countdown">{formatTime(remaining)}</span>
-                )}
-              </div>
-              {!isOverlay && (
-                <>
-                  <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${progress}%` }} />
+                  <div className="timer-display">
+                    {isDone ? (
+                      <div className="timer-status">
+                        <span className="timer-done">DONE!</span>
+                        <span className="timer-overcooked">
+                          +{formatTime(Math.abs(remaining))}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="timer-countdown">{formatTime(remaining)}</span>
+                    )}
                   </div>
-                  <div className="pasta-info">{formatTime(pasta.cookingTime)} total</div>
-                </>
-              )}
+                  {!isOverlay && (
+                    <>
+                      <div className="progress-bar">
+                        <div className="progress-fill" style={{ width: `${progress}%` }} />
+                      </div>
+                      <div className="pasta-info">{formatTime(pasta.cookingTime)} total</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+          {tray.pastas.length === 0 && <div className="empty-tray">Empty tray</div>}
+          {!isOverlay && tray.type === 'large' && tray.pastas.length < 2 && (
+            <div className="tray-capacity">Can hold {2 - tray.pastas.length} more pasta</div>
+          )}
+          {!isOverlay && tray.type === 'extraLarge' && tray.pastas.length < 6 && (
+            <div className="tray-capacity">
+              Can hold {6 - tray.pastas.length} more pasta{tray.pastas.length < 5 ? 's' : ''}
             </div>
-          )
-        })}
-        {tray.pastas.length === 0 && <div className="empty-tray">Empty tray</div>}
-        {!isOverlay && tray.type === 'large' && tray.pastas.length < 2 && (
-          <div className="tray-capacity">Can hold {2 - tray.pastas.length} more pasta</div>
-        )}
-        {!isOverlay && tray.type === 'extraLarge' && tray.pastas.length < 6 && (
-          <div className="tray-capacity">
-            Can hold {6 - tray.pastas.length} more pasta{tray.pastas.length < 5 ? 's' : ''}
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <DndContext
@@ -577,9 +589,6 @@ const Sink = ({
   )
 }
 
-// Droppable position component - renders a full-size droppable cell
-import { useDroppable } from '@dnd-kit/core'
-
 function DroppablePosition({
   id,
   children,
@@ -618,10 +627,6 @@ function DroppablePosition({
     </div>
   )
 }
-
-// Draggable tray component
-import { useDraggable } from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
 
 function DraggableTray({ tray, isDragging, children }: { tray: Tray; isDragging: boolean; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
