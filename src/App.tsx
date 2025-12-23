@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Sink from './components/Sink'
-import TraySelector from './components/TraySelector'
+import TrayDropdown from './components/TrayDropdown'
 import PastaForm from './components/PastaForm'
 import './App.css'
 
@@ -22,6 +22,7 @@ export interface Tray {
 function App() {
   const [trays, setTrays] = useState<Tray[]>([])
   const [selectedTrayType, setSelectedTrayType] = useState<'regular' | 'large' | 'extraLarge'>('regular')
+  const [newlyAddedTrayId, setNewlyAddedTrayId] = useState<string | null>(null)
 
   const getTraySize = (type: 'regular' | 'large' | 'extraLarge'): number => {
     switch (type) {
@@ -32,24 +33,45 @@ function App() {
     }
   }
 
-  const canPlaceTray = (startPosition: number, size: number, excludeTrayId?: string): boolean => {
-    // For extra large trays (size 4), they occupy a 2x2 block
-    if (size === 4) {
-      // Valid starting positions for 2x2 blocks:
-      // - Position 0: occupies 0, 1, 4, 5
-      // - Position 1: occupies 1, 2, 5, 6
-      // - Position 2: occupies 2, 3, 6, 7
-      if (startPosition < 0 || startPosition > 2) {
-        return false
-      }
-      
-      // Calculate 2x2 block positions: top-left, top-right, bottom-left, bottom-right
-      const blockPositions = [
+  // Calculate positions for a 2x2 block based on layout
+  const calculate2x2BlockPositions = (startPosition: number): number[] => {
+    const isMobilePortrait = typeof window !== 'undefined' && window.innerWidth <= 768
+    const cols = isMobilePortrait ? 2 : 4
+    
+    if (isMobilePortrait) {
+      // Portrait: 2 columns, 4 rows
+      // 2x2 block: covers 2 consecutive rows in same column
+      // Start positions: 0, 2, 4, 6
+      return [
+        startPosition,           // top
+        startPosition + cols,    // bottom
+        startPosition + cols + 1, // bottom-right (if applicable)
+        startPosition + 1        // right (if applicable)
+      ].filter(pos => pos >= 0 && pos <= 7)
+    } else {
+      // Desktop: 4 columns, 2 rows
+      // 2x2 block: covers 2 columns x 2 rows
+      return [
         startPosition,           // top-left
         startPosition + 1,       // top-right
         startPosition + 4,       // bottom-left
         startPosition + 5        // bottom-right
       ]
+    }
+  }
+
+  const canPlaceTray = (startPosition: number, size: number, excludeTrayId?: string): boolean => {
+    // For extra large trays (size 4), they occupy a 2x2 block
+    if (size === 4) {
+      const isMobilePortrait = typeof window !== 'undefined' && window.innerWidth <= 768
+      const maxStart = isMobilePortrait ? 6 : 2
+      
+      if (startPosition < 0 || startPosition > maxStart) {
+        return false
+      }
+      
+      // Calculate 2x2 block positions based on layout
+      const blockPositions = calculate2x2BlockPositions(startPosition)
       
       // Check if all positions are within bounds (0-7)
       if (blockPositions.some(pos => pos < 0 || pos > 7)) {
@@ -101,12 +123,7 @@ function App() {
     const positions: number[] = []
     if (size === 4) {
       // Extra large tray: 2x2 block
-      positions.push(
-        position,           // top-left
-        position + 1,       // top-right
-        position + 4,       // bottom-left
-        position + 5        // bottom-right
-      )
+      positions.push(...calculate2x2BlockPositions(position))
     } else {
       // Regular and large trays: single position
       positions.push(position)
@@ -120,6 +137,10 @@ function App() {
     }
 
     setTrays([...trays, newTray])
+    // Auto-select this tray for pasta form
+    setNewlyAddedTrayId(newTray.id)
+    // Clear selection after a short delay
+    setTimeout(() => setNewlyAddedTrayId(null), 100)
   }
 
   const handleAddPasta = (trayId: string, pasta: Omit<Pasta, 'id' | 'startTime'>) => {
@@ -161,16 +182,14 @@ function App() {
   // Extended canPlaceTray that can exclude multiple trays
   const canPlaceTrayWithExclusions = (startPosition: number, size: number, excludeTrayIds: string[]): boolean => {
     if (size === 4) {
-      if (startPosition < 0 || startPosition > 2) {
+      const isMobilePortrait = typeof window !== 'undefined' && window.innerWidth <= 768
+      const maxStart = isMobilePortrait ? 6 : 2
+      
+      if (startPosition < 0 || startPosition > maxStart) {
         return false
       }
       
-      const blockPositions = [
-        startPosition,
-        startPosition + 1,
-        startPosition + 4,
-        startPosition + 5
-      ]
+      const blockPositions = calculate2x2BlockPositions(startPosition)
       
       if (blockPositions.some(pos => pos < 0 || pos > 7)) {
         return false
@@ -207,7 +226,7 @@ function App() {
   // Helper to calculate positions a tray would occupy
   const calculateTrayPositions = (startPosition: number, size: number): number[] => {
     if (size === 4) {
-      return [startPosition, startPosition + 1, startPosition + 4, startPosition + 5]
+      return calculate2x2BlockPositions(startPosition)
     }
     return [startPosition]
   }
@@ -344,12 +363,7 @@ function App() {
     // Calculate new positions
     const newPositions: number[] = []
     if (size === 4) {
-      newPositions.push(
-        newStartPosition,
-        newStartPosition + 1,
-        newStartPosition + 4,
-        newStartPosition + 5
-      )
+      newPositions.push(...calculate2x2BlockPositions(newStartPosition))
     } else {
       newPositions.push(newStartPosition)
     }
@@ -407,18 +421,14 @@ function App() {
         <p>Manage your pasta cooking with precision</p>
       </header>
 
-      <div className="app-content">
-        <div className="left-panel">
-          <TraySelector
-            selectedType={selectedTrayType}
-            onSelectType={setSelectedTrayType}
-          />
-          <PastaForm
-            trays={trays}
-            onAddPasta={handleAddPasta}
-          />
-        </div>
+      <div className="app-controls">
+        <TrayDropdown
+          selectedType={selectedTrayType}
+          onSelectType={setSelectedTrayType}
+        />
+      </div>
 
+      <div className="app-content">
         <div className="sink-container">
           <Sink
             trays={trays}
@@ -431,6 +441,14 @@ function App() {
             getTraySize={getTraySize}
             canPlaceTray={canPlaceTray}
             findSwapOption={findSwapOption}
+          />
+        </div>
+
+        <div className="right-panel">
+          <PastaForm
+            trays={trays}
+            onAddPasta={handleAddPasta}
+            autoSelectTrayId={newlyAddedTrayId || undefined}
           />
         </div>
       </div>

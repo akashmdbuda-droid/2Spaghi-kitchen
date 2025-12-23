@@ -30,6 +30,12 @@ npm run build
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
+## 🌐 Live Demo
+
+**🔗 Access the live app:** [https://akashmdbuda-droid.github.io/2Spaghi-kitchen/](https://akashmdbuda-droid.github.io/2Spaghi-kitchen/)
+
+The app is automatically deployed to GitHub Pages on every push to the `main` branch.
+
 ## 📖 How to Use
 
 ### 1. Place a Tray
@@ -89,6 +95,8 @@ src/
 ## 📋 Documentation
 
 See [SPECIFICATIONS.md](./SPECIFICATIONS.md) for detailed technical specifications, data models, and feature documentation.
+
+---
 
 ## 🚀 Deployment
 
