@@ -1,0 +1,621 @@
+.sink-wrapper {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .sink-wrapper {
+    padding: 16px;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sink-wrapper {
+    padding: 12px;
+    border-radius: 8px;
+  }
+}
+
+.sink-title {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.sink-title h2 {
+  font-size: 1.8rem;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.sink-title p {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .sink-title h2 {
+    font-size: 1.4rem;
+  }
+  
+  .sink-title p {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .sink-title h2 {
+    font-size: 1.2rem;
+  }
+  
+  .sink-title p {
+    font-size: 0.8rem;
+  }
+}
+
+.sink {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 12px;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .sink {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sink {
+    gap: 8px;
+  }
+}
+
+.sink-position {
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  border: 3px solid #0ea5e9;
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  /* Better touch targets */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+@media (max-width: 768px) {
+  .sink-position {
+    min-height: 100px;
+    border-width: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sink-position {
+    min-height: 80px;
+    border-width: 2px;
+    border-radius: 8px;
+  }
+}
+
+.sink-position:hover:not(.occupied) {
+  background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 100%);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+}
+
+/* Touch-friendly active state for mobile */
+@media (hover: none) and (pointer: coarse) {
+  .sink-position:active:not(.occupied) {
+    background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 100%);
+    transform: scale(0.98);
+  }
+}
+
+.sink-position.occupied {
+  cursor: default;
+  border-color: #10b981;
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+}
+
+.sink-position.preview {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #f59e0b;
+  border-style: dashed;
+}
+
+.position-number {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #0ea5e9;
+  opacity: 0.5;
+}
+
+.preview-indicator {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #f59e0b;
+  text-align: center;
+}
+
+.tray-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.tray {
+  flex: 1;
+  background: white;
+  border: 2px solid #10b981;
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tray-regular {
+  border-color: #3b82f6;
+}
+
+.tray-large {
+  border-color: #8b5cf6;
+}
+
+.tray-extraLarge {
+  border-color: #ef4444;
+}
+
+.tray-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 4px;
+}
+
+.drag-handle {
+  cursor: grab;
+  color: #9ca3af;
+  font-size: 0.8rem;
+  letter-spacing: -2px;
+  user-select: none;
+  padding: 2px;
+  border-radius: 2px;
+  transition: all 0.2s;
+  /* Better touch target for mobile */
+  min-width: 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none; /* Prevent scrolling when dragging */
+}
+
+@media (max-width: 480px) {
+  .drag-handle {
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 1rem;
+  }
+}
+
+.drag-handle:hover {
+  color: #6b7280;
+  background: #f3f4f6;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.tray-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.remove-tray-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  /* Better touch target */
+  min-width: 32px;
+  min-height: 32px;
+  padding: 6px;
+  touch-action: manipulation;
+}
+
+@media (max-width: 480px) {
+  .remove-tray-btn {
+    width: 24px;
+    height: 24px;
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 16px;
+  }
+}
+
+.remove-tray-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.pastas-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.pasta-item {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pasta-item.done {
+  background: #fef3c7;
+  border-color: #fbbf24;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.pasta-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pasta-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.remove-pasta-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  /* Better touch target */
+  min-width: 28px;
+  min-height: 28px;
+  padding: 6px;
+  touch-action: manipulation;
+}
+
+@media (max-width: 480px) {
+  .remove-pasta-btn {
+    width: 20px;
+    height: 20px;
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 12px;
+  }
+}
+
+.remove-pasta-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.timer-display {
+  text-align: center;
+}
+
+.timer-countdown {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #059669;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-done {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #d97706;
+}
+
+.progress-bar {
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  transition: width 1s linear;
+}
+
+.pasta-info {
+  font-size: 0.7rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+.empty-tray {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-align: center;
+  padding: 8px;
+  font-style: italic;
+}
+
+.tray-capacity {
+  font-size: 0.7rem;
+  color: #8b5cf6;
+  text-align: center;
+  padding: 4px;
+  font-style: italic;
+}
+
+/* Handle multi-position trays */
+.sink-position.extra-large-tray {
+  z-index: 2;
+  position: relative;
+}
+
+.sink-position.extra-large-tray .tray-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(200% + 12px); /* 2 columns + 1 gap */
+  height: calc(200% + 12px); /* 2 rows + 1 gap */
+  z-index: 10;
+}
+
+.sink-position.extra-large-tray .tray {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
+.sink-position.extra-large-part {
+  z-index: 1;
+  /* Show as occupied/part of tray */
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border-color: #10b981;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Enable pointer events during drag mode for all positions */
+.sink.is-dragging-mode .sink-position {
+  pointer-events: auto !important;
+}
+
+.sink.is-dragging-mode .sink-position.extra-large-part {
+  pointer-events: auto !important;
+}
+
+/* CRITICAL: Disable pointer events on tray containers during drag mode
+   so drag events pass through to the underlying position divs */
+.sink.is-dragging-mode .tray-container:not(.is-dragging) {
+  pointer-events: none !important;
+}
+
+/* Re-enable pointer events on the dragging tray's container */
+.sink.is-dragging-mode .tray-container.is-dragging {
+  pointer-events: auto !important;
+}
+
+.sink-position.preview-part {
+  /* Show preview styling for all 4 positions of extra-large tray */
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #f59e0b;
+  border-style: dashed;
+  cursor: pointer;
+}
+
+/* Ensure extra large tray preview spans correctly */
+.sink-position.preview.extra-large-tray {
+  border-width: 4px;
+}
+
+/* Drag and drop styles */
+.tray-container {
+  cursor: grab;
+}
+
+.tray-container:active {
+  cursor: grabbing;
+}
+
+.tray-container.is-dragging {
+  opacity: 0.5;
+}
+
+.sink-position.dragging {
+  opacity: 0.3;
+  border-style: dashed;
+  background: #f3f4f6 !important;
+}
+
+/* When in dragging mode, show all positions as potential drop targets */
+.sink.is-dragging-mode .sink-position:not(.occupied):not(.dragging) {
+  cursor: copy;
+}
+
+.sink-position.drop-preview {
+  background: linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%);
+  border-color: #6366f1;
+  border-style: dashed;
+  border-width: 3px;
+}
+
+.sink-position.drop-preview-part {
+  background: linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%);
+  border-color: #6366f1;
+  border-style: dashed;
+}
+
+.sink-position.drop-preview .position-number,
+.sink-position.drop-preview-part .position-number {
+  color: #6366f1;
+}
+
+/* Move indicator */
+.sink-position.drop-preview::after {
+  content: '↓ Drop here';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6366f1;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Swap preview styles */
+.sink-position.swap-drag-target {
+  background: linear-gradient(135deg, #bbf7d0 0%, #86efac 100%) !important;
+  border-color: #22c55e !important;
+  border-style: dashed !important;
+  border-width: 3px;
+  z-index: 5;
+}
+
+.sink-position.swap-drag-target-part {
+  background: linear-gradient(135deg, #bbf7d0 0%, #86efac 100%) !important;
+  border-color: #22c55e !important;
+  border-style: dashed !important;
+}
+
+.sink-position.swap-blocking-current {
+  opacity: 0.5;
+  transform: scale(0.95);
+  transition: all 0.2s ease;
+}
+
+.sink-position.swap-blocking-new {
+  background: linear-gradient(135deg, #fef08a 0%, #fde047 100%) !important;
+  border-color: #eab308 !important;
+  border-style: dashed !important;
+  border-width: 3px;
+  animation: swap-pulse 1s ease-in-out infinite;
+}
+
+.sink-position.swap-blocking-new-part {
+  background: linear-gradient(135deg, #fef08a 0%, #fde047 100%) !important;
+  border-color: #eab308 !important;
+  border-style: dashed !important;
+  animation: swap-pulse 1s ease-in-out infinite;
+}
+
+@keyframes swap-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Swap indicators */
+.swap-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  z-index: 20;
+}
+
+.swap-drop-here {
+  background: rgba(34, 197, 94, 0.9);
+  color: white;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+}
+
+.swap-move-here {
+  background: rgba(234, 179, 8, 0.9);
+  color: #1f2937;
+  box-shadow: 0 2px 8px rgba(234, 179, 8, 0.4);
+}
+
+/* Ensure swap blocking tray shows correctly over other elements */
+.sink-position.swap-blocking-current .tray-container {
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+/* Touch dragging styles */
+.sink.is-touch-dragging .sink-position {
+  transition: none; /* Disable transitions during touch drag for better performance */
+}
+
+.sink.is-touch-dragging .tray-container.is-dragging {
+  opacity: 0.7;
+  transform: scale(1.05);
+  z-index: 1000;
+}
+

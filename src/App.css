@@ -1,0 +1,93 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.app-header {
+  text-align: center;
+  color: white;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.app-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 8px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.app-header p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .app-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .app-header p {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .app-header p {
+    font-size: 0.85rem;
+  }
+}
+
+.app-content {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 24px;
+}
+
+.left-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .app-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .left-panel {
+    order: 2; /* Move left panel below sink on tablets */
+  }
+  
+  .sink-container {
+    order: 1; /* Sink appears first */
+  }
+}
+
+@media (max-width: 768px) {
+  .app {
+    gap: 16px;
+  }
+  
+  .app-content {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app {
+    gap: 12px;
+  }
+  
+  .app-content {
+    gap: 12px;
+  }
+}
+
