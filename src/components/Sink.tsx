@@ -398,15 +398,22 @@ const Sink = ({
 
   // Render a tray card (used for both regular rendering and drag overlay)
   const renderTrayCard = (tray: Tray, isOverlay = false) => {
-    const isExpanded = tray.id === expandedTrayId
+    // Check if any pasta in this tray is done
+    const hasDonePasta = tray.pastas.some(p => getRemainingTime(p) <= 0)
+
+    // Auto-expand if done, otherwise follow user interaction
+    const isExpanded = tray.id === expandedTrayId || hasDonePasta
 
     return (
       <div
-        className={`tray tray-${tray.type} ${isOverlay ? 'tray-overlay' : ''} ${isExpanded ? 'expanded' : ''}`}
+        className={`tray tray-${tray.type} ${isOverlay ? 'tray-overlay' : ''} ${isExpanded ? 'expanded' : ''} ${hasDonePasta ? 'has-done-pasta' : ''}`}
         onClick={(e) => {
           if (!isOverlay && !activeTray) {
             e.stopPropagation()
-            setExpandedTrayId(prev => prev === tray.id ? null : tray.id)
+            // Only toggle if not forced by done state
+            if (!hasDonePasta) {
+              setExpandedTrayId(prev => prev === tray.id ? null : tray.id)
+            }
           }
         }}
       >

@@ -349,22 +349,32 @@
   /* Light red tint when done */
 }
 
-.pasta-item.done {
-  background: #fef3c7;
-  border-color: #fbbf24;
-  animation: pulse 2s infinite;
+/* Flashing border/shadow for the entire tray when pasta is done */
+.tray.has-done-pasta {
+  animation: tray-pulse 1s infinite;
+  border-color: #ef4444;
+  z-index: 5;
+  /* Bring to front */
 }
 
-@keyframes pulse {
+@keyframes tray-pulse {
 
   0%,
   100% {
-    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    border-color: #ef4444;
   }
 
   50% {
-    opacity: 0.8;
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    border-color: #f87171;
   }
+}
+
+.pasta-item.done {
+  /* Keep background image visible */
+  background-color: transparent;
+  border-color: #ef4444;
 }
 
 .pasta-header {
