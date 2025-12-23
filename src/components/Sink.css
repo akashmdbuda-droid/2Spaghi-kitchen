@@ -69,9 +69,13 @@
   box-sizing: border-box;
 }
 
+/* Portrait mode for mobile - 2 columns x 4 rows */
 @media (max-width: 768px) {
   .sink {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(4, 1fr);
     gap: 10px;
+    max-width: 100%;
   }
 }
 
@@ -614,8 +618,33 @@
 }
 
 .sink.is-touch-dragging .tray-container.is-dragging {
-  opacity: 0.7;
-  transform: scale(1.05);
+  opacity: 0.8;
+  transform: scale(1.08);
   z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s ease-out;
+}
+
+/* Improved touch drag feedback */
+.tray-container.is-dragging {
+  cursor: grabbing !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Better touch targets for mobile */
+@media (max-width: 768px) {
+  .tray-container {
+    touch-action: none;
+    -webkit-user-drag: none;
+  }
+  
+  .sink-position {
+    touch-action: manipulation;
+  }
+  
+  .sink.is-dragging-mode .sink-position {
+    touch-action: auto;
+  }
 }
 

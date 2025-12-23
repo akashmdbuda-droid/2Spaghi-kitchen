@@ -106,25 +106,36 @@ const Sink = ({
 
   // Find all possible start positions for a 2x2 block that includes the given position
   const getPossibleStartPositions = (position: number): number[] => {
-    // Grid layout:
-    // Row 1: 0, 1, 2, 3
-    // Row 2: 4, 5, 6, 7
-    // 
-    // A 2x2 block starting at X covers: X, X+1, X+4, X+5
-    // Valid start positions: 0, 1, 2
+    // Detect grid layout: mobile portrait (2x4) vs desktop (4x2)
+    const isMobilePortrait = window.innerWidth <= 768
+    const cols = isMobilePortrait ? 2 : 4
+    const rows = isMobilePortrait ? 4 : 2
     
-    const col = position % 4
-    const row = Math.floor(position / 4)
+    const col = position % cols
+    const row = Math.floor(position / cols)
     const possibleStarts: number[] = []
     
-    // Check which 2x2 blocks include this position
-    // A block starting at startCol includes columns startCol and startCol+1
-    for (let startCol = 0; startCol <= 2; startCol++) {
-      // Check if this position's column is covered by a block starting at startCol
-      if (col >= startCol && col <= startCol + 1) {
-        // For bottom row positions, the block must start from top row
-        if (row === 0 || row === 1) {
-          possibleStarts.push(startCol)
+    if (isMobilePortrait) {
+      // Mobile portrait: 2 columns, 4 rows
+      // 2x2 block in portrait: covers 2 consecutive rows in same column
+      // Valid start positions: 0, 2, 4, 6 (top of each column pair)
+      for (let startRow = 0; startRow <= rows - 2; startRow++) {
+        if (row >= startRow && row <= startRow + 1) {
+          const startPos = startRow * cols + col
+          if (startPos >= 0 && startPos <= 6) {
+            possibleStarts.push(startPos)
+          }
+        }
+      }
+    } else {
+      // Desktop: 4 columns, 2 rows
+      // A 2x2 block starting at X covers: X, X+1, X+4, X+5
+      // Valid start positions: 0, 1, 2
+      for (let startCol = 0; startCol <= cols - 2; startCol++) {
+        if (col >= startCol && col <= startCol + 1) {
+          if (row === 0 || row === 1) {
+            possibleStarts.push(startCol)
+          }
         }
       }
     }
@@ -177,13 +188,12 @@ const Sink = ({
       
       for (const startPosition of possibleStarts) {
         if (canPlaceTray(startPosition, size)) {
-          // Return the 2x2 block positions
-          return [
-            startPosition,           // top-left
-            startPosition + 1,       // top-right
-            startPosition + 4,       // bottom-left
-            startPosition + 5        // bottom-right
-          ]
+          // Return the 2x2 block positions based on layout
+          const isMobilePortrait = window.innerWidth <= 768
+          const cols = isMobilePortrait ? 2 : 4
+          return isMobilePortrait
+            ? [startPosition, startPosition + cols, startPosition + cols + 1, startPosition + 1].filter((p, i, arr) => arr.indexOf(p) === i && p >= 0 && p <= 7)
+            : [startPosition, startPosition + 1, startPosition + 4, startPosition + 5]
         }
       }
       return null
@@ -227,12 +237,17 @@ const Sink = ({
     const deltaX = Math.abs(touch.clientX - touchStartPos.x)
     const deltaY = Math.abs(touch.clientY - touchStartPos.y)
     
-    // Start dragging after 10px movement
-    if (deltaX > 10 || deltaY > 10) {
+    // Start dragging after 8px movement (more sensitive for better UX)
+    if (deltaX > 8 || deltaY > 8) {
       if (!isTouchDragging) {
         setIsTouchDragging(true)
+        // Add haptic feedback if available
+        if (navigator.vibrate) {
+          navigator.vibrate(10)
+        }
       }
       e.preventDefault() // Prevent scrolling
+      e.stopPropagation()
       
       // Simulate drag over behavior
       handleDragOverForTouch(position)

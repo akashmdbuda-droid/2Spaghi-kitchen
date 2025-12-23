@@ -45,13 +45,25 @@
   }
 }
 
+.app-controls {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
 .app-content {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 1fr 320px;
   gap: 24px;
 }
 
-.left-panel {
+.sink-container {
+  order: 1;
+}
+
+.right-panel {
+  order: 2;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -62,18 +74,22 @@
     grid-template-columns: 1fr;
   }
   
-  .left-panel {
-    order: 2; /* Move left panel below sink on tablets */
+  .sink-container {
+    order: 1;
   }
   
-  .sink-container {
-    order: 1; /* Sink appears first */
+  .right-panel {
+    order: 2;
   }
 }
 
 @media (max-width: 768px) {
   .app {
     gap: 16px;
+  }
+  
+  .app-controls {
+    padding: 0 12px;
   }
   
   .app-content {
@@ -84,6 +100,10 @@
 @media (max-width: 480px) {
   .app {
     gap: 12px;
+  }
+  
+  .app-controls {
+    padding: 0 8px;
   }
   
   .app-content {
