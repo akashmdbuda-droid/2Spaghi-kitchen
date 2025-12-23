@@ -117,6 +117,190 @@
   font-size: 0.8rem;
 }
 
+/* Pasta Preset Selector */
+.pasta-preset-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pasta-preset-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pasta-preset-group-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pasta-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.ravioli-grid {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+.pasta-preset-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  min-height: 140px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pasta-preset-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #667eea;
+}
+
+.pasta-preset-card.selected {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  transform: translateY(-2px);
+}
+
+.pasta-preset-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.pasta-preset-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pasta-preset-emoji {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.pasta-preset-info {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pasta-preset-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.pasta-preset-time {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+}
+
+.pasta-preset-time-range {
+  font-size: 0.7rem;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+}
+
+.ravioli-card {
+  min-height: 150px;
+}
+
+.ravioli-card .pasta-preset-image {
+  width: 90px;
+  height: 90px;
+}
+
+@media (max-width: 768px) {
+  .pasta-preset-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+  }
+  
+  .ravioli-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  }
+  
+  .pasta-preset-card {
+    padding: 10px;
+    min-height: 130px;
+  }
+  
+  .pasta-preset-image {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .ravioli-card .pasta-preset-image {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .pasta-preset-emoji {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .pasta-preset-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  
+  .ravioli-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .pasta-preset-card {
+    min-height: 120px;
+    padding: 8px;
+  }
+  
+  .pasta-preset-image {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .ravioli-card .pasta-preset-image {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .pasta-preset-name {
+    font-size: 0.8rem;
+  }
+  
+  .pasta-preset-time,
+  .pasta-preset-time-range {
+    font-size: 0.7rem;
+  }
+}
+
 .submit-btn {
   padding: 12px 24px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

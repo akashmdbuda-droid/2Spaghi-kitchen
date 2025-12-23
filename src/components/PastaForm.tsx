@@ -141,40 +141,101 @@ const PastaForm = ({ trays, onAddPasta, autoSelectTrayId }: PastaFormProps) => {
 
           <div className="form-group">
             <label htmlFor="pasta-preset">Pasta Type (Preset)</label>
-            <select
-              id="pasta-preset"
-              value={selectedPreset}
-              onChange={(e) => {
-                setSelectedPreset(e.target.value)
-                if (e.target.value) {
-                  const preset = getPastaPreset(e.target.value)
-                  if (preset) {
-                    setPastaName(preset.name)
-                    const minutes = Math.floor(preset.cookingTime / 60)
-                    const seconds = preset.cookingTime % 60
-                    setCookingTimeMinutes(minutes)
-                    setCookingTimeSeconds(seconds)
-                  }
-                }
-              }}
-              className="form-input"
-            >
-              <option value="">Select pasta type...</option>
-              <optgroup label="Regular Pasta">
+            <div className="pasta-preset-selector">
+              <div className="pasta-preset-grid">
                 {pastaPresets.filter(p => !p.category).map(preset => (
-                  <option key={preset.name} value={preset.name}>
-                    {preset.name.charAt(0).toUpperCase() + preset.name.slice(1)} ({Math.floor(preset.cookingTime / 60)}:{(preset.cookingTime % 60).toString().padStart(2, '0')})
-                  </option>
+                  <button
+                    key={preset.name}
+                    type="button"
+                    className={`pasta-preset-card ${selectedPreset === preset.name ? 'selected' : ''}`}
+                    onClick={() => {
+                      setSelectedPreset(preset.name)
+                      setPastaName(preset.name)
+                      const minutes = Math.floor(preset.cookingTime / 60)
+                      const seconds = preset.cookingTime % 60
+                      setCookingTimeMinutes(minutes)
+                      setCookingTimeSeconds(seconds)
+                    }}
+                  >
+                    <div className="pasta-preset-image">
+                      {preset.imageUrl ? (
+                        <img 
+                          src={preset.imageUrl} 
+                          alt={preset.name}
+                          onError={(e) => {
+                            // Fallback to emoji if image fails
+                            const target = e.target as HTMLImageElement
+                            target.style.display = 'none'
+                            const emoji = document.createElement('span')
+                            emoji.textContent = preset.emoji || '🍝'
+                            emoji.className = 'pasta-preset-emoji'
+                            target.parentElement?.appendChild(emoji)
+                          }}
+                        />
+                      ) : (
+                        <span className="pasta-preset-emoji">{preset.emoji || '🍝'}</span>
+                      )}
+                    </div>
+                    <div className="pasta-preset-info">
+                      <div className="pasta-preset-name">
+                        {preset.name.charAt(0).toUpperCase() + preset.name.slice(1)}
+                      </div>
+                      <div className="pasta-preset-time">
+                        {Math.floor(preset.cookingTime / 60)}:{(preset.cookingTime % 60).toString().padStart(2, '0')}
+                      </div>
+                    </div>
+                  </button>
                 ))}
-              </optgroup>
-              <optgroup label="Ravioli">
-                {pastaPresets.filter(p => p.category === 'ravioli').map(preset => (
-                  <option key={preset.name} value={preset.name}>
-                    {preset.name.charAt(0).toUpperCase() + preset.name.slice(1)} ({Math.floor(preset.cookingTime / 60)}:{(preset.cookingTime % 60).toString().padStart(2, '0')} - {Math.floor(RAVIOLI_MAX_TIME / 60)}:00)
-                  </option>
-                ))}
-              </optgroup>
-            </select>
+              </div>
+              
+              <div className="pasta-preset-group">
+                <div className="pasta-preset-group-label">Ravioli</div>
+                <div className="pasta-preset-grid ravioli-grid">
+                  {pastaPresets.filter(p => p.category === 'ravioli').map(preset => (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      className={`pasta-preset-card ravioli-card ${selectedPreset === preset.name ? 'selected' : ''}`}
+                      onClick={() => {
+                        setSelectedPreset(preset.name)
+                        setPastaName(preset.name)
+                        const minutes = Math.floor(preset.cookingTime / 60)
+                        const seconds = preset.cookingTime % 60
+                        setCookingTimeMinutes(minutes)
+                        setCookingTimeSeconds(seconds)
+                      }}
+                    >
+                      <div className="pasta-preset-image">
+                        {preset.imageUrl ? (
+                          <img 
+                            src={preset.imageUrl} 
+                            alt={preset.name}
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                              const emoji = document.createElement('span')
+                              emoji.textContent = preset.emoji || '🥟'
+                              emoji.className = 'pasta-preset-emoji'
+                              target.parentElement?.appendChild(emoji)
+                            }}
+                          />
+                        ) : (
+                          <span className="pasta-preset-emoji">{preset.emoji || '🥟'}</span>
+                        )}
+                      </div>
+                      <div className="pasta-preset-info">
+                        <div className="pasta-preset-name">
+                          {preset.name.split(' - ')[1]?.charAt(0).toUpperCase() + preset.name.split(' - ')[1]?.slice(1) || preset.name}
+                        </div>
+                        <div className="pasta-preset-time-range">
+                          {Math.floor(preset.cookingTime / 60)}:{(preset.cookingTime % 60).toString().padStart(2, '0')} - {Math.floor(RAVIOLI_MAX_TIME / 60)}:00
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="form-group">
