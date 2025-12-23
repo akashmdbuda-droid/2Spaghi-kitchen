@@ -25,7 +25,7 @@ function App() {
   const [trays, setTrays] = useState<Tray[]>([])
   const [selectedTrayType, setSelectedTrayType] = useState<'regular' | 'large' | 'extraLarge'>('regular')
   const [newlyAddedTrayId, setNewlyAddedTrayId] = useState<string | null>(null)
-  
+
   // Mobile modals
   const [showTrayModal, setShowTrayModal] = useState(false)
   const [showPastaModal, setShowPastaModal] = useState(false)
@@ -44,11 +44,10 @@ function App() {
   // Calculate positions for a 2x2 block based on layout
   const calculate2x2BlockPositions = (startPosition: number): number[] => {
     const isMobilePortrait = typeof window !== 'undefined' && window.innerWidth <= 768
-    
+
     if (isMobilePortrait) {
-      // Portrait: 2 columns, 4 rows
-      // 2x2 block MUST start from column 0 (even positions: 0, 2, 4)
-      // Block covers: startPosition, startPosition+1, startPosition+2, startPosition+3
+      // Mobile portrait: 2 columns, 4 rows
+      // 2x2 block covers 4 consecutive positions (2 cols × 2 rows)
       return [
         startPosition,           // top-left
         startPosition + 1,       // top-right
@@ -70,7 +69,7 @@ function App() {
   // Get valid start positions for extra large trays based on layout
   const getValidExtraLargeStartPositions = (): number[] => {
     const isMobilePortrait = typeof window !== 'undefined' && window.innerWidth <= 768
-    // Mobile portrait (2 cols): only column 0 positions that have room below: 0, 2, 4
+    // Mobile portrait (2 cols): positions 0, 2, 4 (any row that has room below)
     // Desktop (4 cols): positions 0, 1, 2 (top row, with room to the right)
     return isMobilePortrait ? [0, 2, 4] : [0, 1, 2]
   }
@@ -79,20 +78,20 @@ function App() {
     // For extra large trays (size 4), they occupy a 2x2 block
     if (size === 4) {
       const validStarts = getValidExtraLargeStartPositions()
-      
+
       // Start position must be a valid 2x2 block start
       if (!validStarts.includes(startPosition)) {
         return false
       }
-      
+
       // Calculate 2x2 block positions based on layout
       const blockPositions = calculate2x2BlockPositions(startPosition)
-      
+
       // Check if all positions are within bounds (0-7)
       if (blockPositions.some(pos => pos < 0 || pos > 7)) {
         return false
       }
-      
+
       // Check if any position is already occupied (excluding the tray being moved)
       const occupiedPositions = new Set<number>()
       trays.forEach(tray => {
@@ -100,13 +99,13 @@ function App() {
           tray.positions.forEach(pos => occupiedPositions.add(pos))
         }
       })
-      
+
       for (const pos of blockPositions) {
         if (occupiedPositions.has(pos)) {
           return false
         }
       }
-      
+
       return true
     }
 
@@ -131,14 +130,14 @@ function App() {
   const handlePlaceTray = (position: number, trayType?: 'regular' | 'large' | 'extraLarge') => {
     const typeToUse = trayType || selectedTrayType
     const size = getTraySize(typeToUse)
-    
+
     let startPosition = position
-    
+
     if (!canPlaceTray(position, size)) {
       // For extra large trays, auto-find any empty 2x2 space
       if (size === 4) {
         const validStartPositions = getValidExtraLargeStartPositions()
-        
+
         let foundPosition = false
         for (const tryPos of validStartPositions) {
           if (canPlaceTray(tryPos, size)) {
@@ -147,7 +146,7 @@ function App() {
             break
           }
         }
-        
+
         if (!foundPosition) {
           return // No space available anywhere
         }
@@ -173,7 +172,7 @@ function App() {
     }
 
     setTrays([...trays, newTray])
-    
+
     // On mobile, show pasta modal after placing tray
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
     if (isMobile) {
@@ -260,31 +259,31 @@ function App() {
   const canPlaceTrayWithExclusions = (startPosition: number, size: number, excludeTrayIds: string[]): boolean => {
     if (size === 4) {
       const validStarts = getValidExtraLargeStartPositions()
-      
+
       // Start position must be a valid 2x2 block start
       if (!validStarts.includes(startPosition)) {
         return false
       }
-      
+
       const blockPositions = calculate2x2BlockPositions(startPosition)
-      
+
       if (blockPositions.some(pos => pos < 0 || pos > 7)) {
         return false
       }
-      
+
       const occupiedPositions = new Set<number>()
       trays.forEach(tray => {
         if (!excludeTrayIds.includes(tray.id)) {
           tray.positions.forEach(pos => occupiedPositions.add(pos))
         }
       })
-      
+
       for (const pos of blockPositions) {
         if (occupiedPositions.has(pos)) {
           return false
         }
       }
-      
+
       return true
     }
 
@@ -311,32 +310,72 @@ function App() {
   // Find swap options when trying to move a tray to an occupied position
   // Now handles MULTIPLE blocking trays
   const findSwapOption = (
-    draggingTrayId: string, 
+    draggingTrayId: string,
     targetPosition: number
   ): { displacedTrays: Array<{ trayId: string; newPosition: number }> } | null => {
     const draggingTray = trays.find(t => t.id === draggingTrayId)
     if (!draggingTray) return null
 
     const draggingSize = getTraySize(draggingTray.type)
-    
+
+    // Check layout for column count
+    const isMobilePortrait = typeof window !== 'undefined' && window.innerWidth <= 768
+    const columns = isMobilePortrait ? 2 : 4
+
     // Calculate positions the dragging tray would occupy
     let dragTargetPositions: number[] = []
     if (draggingSize === 4) {
       // For extra large, need a valid 2x2 start position
-      const col = targetPosition % 4
-      const possibleStarts: number[] = []
-      for (let startCol = 0; startCol <= 2; startCol++) {
-        if (col >= startCol && col <= startCol + 1) {
-          possibleStarts.push(startCol)
+      // We need to find the top-left start position that would cover the targetPosition
+      // A 4-size tray (2x2) covers [start, start+1, start+col, start+col+1]
+      // So targetPosition could be any of those 4 relative to a start position.
+
+      const validStarts = getValidExtraLargeStartPositions()
+      let bestStartPos = -1
+
+      // Try to find a valid start position that *includes* the targetPosition
+      // We prioritize the start position that aligns with the target being the "closest" handle
+      // But really any valid block containing targetPosition is a candidate.
+
+      // Simple heuristic: Try all valid starts, see if they contain targetPosition
+      for (const startPos of validStarts) {
+        const positions = calculate2x2BlockPositions(startPos)
+        if (positions.includes(targetPosition)) {
+          bestStartPos = startPos
+          break
         }
       }
-      
-      for (const startPos of possibleStarts) {
-        dragTargetPositions = [startPos, startPos + 1, startPos + 4, startPos + 5]
-        break // Use first valid start
+
+      // If targetPosition is not part of any valid block (shouldn't happen if logic is sound, but defensive),
+      // fallback to just finding a valid start derived from column math
+      if (bestStartPos === -1) {
+        const col = targetPosition % columns
+        // Simple clamp to valid 2x2 area
+        // This is a rough estimation if the precise check above fails
+
+        // row constraint depends on total rows, but for 2x2 we just need space below
+        // Valid start rows are 0..(totalRows-2). 
+        // Mobile: 4 rows (0-3), valid starts at row 0, 1, 2? No, size 8 total.
+        // 8 positions. 
+        // Mobile (2 cols): Rows 0,1,2,3. Valid starts for 2x2 height: Rows 0,1,2.
+        // array indices: 0, 2, 4. 
+        // If target is 7 (bottom right), start could be 4 (indices 4,5,6,7).
+        let tentativeStart = targetPosition
+        if (col >= columns - 1) tentativeStart -= 1 // shift left if at right edge
+
+        // Check if valid
+        if (validStarts.includes(tentativeStart)) bestStartPos = tentativeStart
+        else if (validStarts.includes(tentativeStart - columns)) bestStartPos = tentativeStart - columns
+        // fallback to first valid
+        if (bestStartPos === -1 && validStarts.length > 0) bestStartPos = validStarts[0]
       }
-      
-      if (dragTargetPositions.length === 0) return null
+
+      if (bestStartPos !== -1) {
+        dragTargetPositions = calculate2x2BlockPositions(bestStartPos)
+      } else {
+        return null
+      }
+
     } else {
       dragTargetPositions = [targetPosition]
     }
@@ -353,39 +392,44 @@ function App() {
     if (displacedTrayIds.size === 0) return null
 
     const displacedTrays = Array.from(displacedTrayIds).map(id => trays.find(t => t.id === id)!)
-    
+
     // Calculate which positions will be freed by the dragging tray
     const freedPositions = draggingTray.positions
-    
+
     // Try to find valid positions for ALL displaced trays
-    // We need to assign each displaced tray a new position that:
-    // 1. Doesn't overlap with dragTargetPositions
-    // 2. Doesn't overlap with other trays (except dragging tray and other displaced trays)
-    // 3. Doesn't overlap with positions assigned to other displaced trays
-    
     const result: Array<{ trayId: string; newPosition: number }> = []
     const assignedPositions = new Set<number>()
-    
+
     // Add dragTargetPositions to assigned (these are taken by dragging tray)
     dragTargetPositions.forEach(p => assignedPositions.add(p))
-    
+
     // Sort displaced trays by size (larger first - harder to place)
-    const sortedDisplacedTrays = [...displacedTrays].sort((a, b) => 
+    const sortedDisplacedTrays = [...displacedTrays].sort((a, b) =>
       getTraySize(b.type) - getTraySize(a.type)
     )
-    
+
+    // Generate all available start positions to try for displaced trays
+    const allPossibleStarts = []
+    const totalPositions = 8
+    for (let i = 0; i < totalPositions; i++) {
+      allPossibleStarts.push(i)
+    }
+
     for (const displacedTray of sortedDisplacedTrays) {
       const displacedSize = getTraySize(displacedTray.type)
       let foundPosition = false
-      
+
       // Get all tray IDs to exclude (dragging + all displaced)
       const excludeIds = [draggingTrayId, ...displacedTrays.map(t => t.id)]
-      
-      // Try positions, prioritizing freed positions
-      const positionsToTry = displacedSize === 4 
-        ? [0, 1, 2] // Extra large start positions
-        : [0, 1, 2, 3, 4, 5, 6, 7]
-      
+
+      // Determine valid start positions for this tray size
+      let positionsToTry: number[]
+      if (displacedSize === 4) {
+        positionsToTry = getValidExtraLargeStartPositions()
+      } else {
+        positionsToTry = [...allPossibleStarts]
+      }
+
       // Sort to prefer freed positions first
       positionsToTry.sort((a, b) => {
         const aIsFreed = freedPositions.includes(a)
@@ -394,35 +438,35 @@ function App() {
         if (!aIsFreed && bIsFreed) return 1
         return 0
       })
-      
+
       for (const tryPos of positionsToTry) {
         // Check if position is valid (not occupied by non-displaced trays)
         if (!canPlaceTrayWithExclusions(tryPos, displacedSize, excludeIds)) {
           continue
         }
-        
+
         // Calculate what positions this tray would take
         const wouldOccupy = calculateTrayPositions(tryPos, displacedSize)
-        
+
         // Check if any of these positions are already assigned
         const hasConflict = wouldOccupy.some(p => assignedPositions.has(p))
         if (hasConflict) {
           continue
         }
-        
+
         // This position works!
         result.push({ trayId: displacedTray.id, newPosition: tryPos })
         wouldOccupy.forEach(p => assignedPositions.add(p))
         foundPosition = true
         break
       }
-      
+
       if (!foundPosition) {
         // Can't find a valid position for this tray - swap not possible
         return null
       }
     }
-    
+
     return { displacedTrays: result }
   }
 
@@ -431,7 +475,7 @@ function App() {
     if (!tray) return
 
     const size = getTraySize(tray.type)
-    
+
     // Check if the new position is valid (excluding this tray's current positions)
     if (!canPlaceTray(newStartPosition, size, trayId)) {
       return
@@ -456,8 +500,8 @@ function App() {
 
   // Handle swap operation - move dragging tray and ALL displaced trays simultaneously
   const handleSwapTrays = (
-    draggingTrayId: string, 
-    newDraggingPosition: number, 
+    draggingTrayId: string,
+    newDraggingPosition: number,
     displacedTrays: Array<{ trayId: string; newPosition: number }>
   ) => {
     const draggingTray = trays.find(t => t.id === draggingTrayId)
@@ -471,7 +515,7 @@ function App() {
     // Build a map of tray ID to new positions
     const newPositionsMap = new Map<string, number[]>()
     newPositionsMap.set(draggingTrayId, newDraggingPositions)
-    
+
     for (const displaced of displacedTrays) {
       const displacedTray = trays.find(t => t.id === displaced.trayId)
       if (displacedTray) {

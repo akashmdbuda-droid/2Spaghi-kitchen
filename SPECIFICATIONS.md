@@ -38,6 +38,8 @@ A visual, interactive timer application that simulates a real pasta cooking sink
 ## 🏗️ System Architecture
 
 ### Grid Layout
+
+#### Desktop Layout (4 columns × 2 rows)
 ```
 ┌─────────────────────────────────┐
 │      BOILING WATER SINK         │
@@ -47,6 +49,22 @@ A visual, interactive timer application that simulates a real pasta cooking sink
 │   5    │   6    │   7    │   8  │  ← Row 2 (indices 4-7)
 └────────┴────────┴────────┴──────┘
          8 Total Positions
+```
+
+#### Mobile Portrait Layout (2 columns × 4 rows)
+```
+┌─────────────────┐
+│ BOILING WATER   │
+├────────┬────────┤
+│   1    │   2    │  ← Row 1 (indices 0-1)
+├────────┼────────┤
+│   3    │   4    │  ← Row 2 (indices 2-3)
+├────────┼────────┤
+│   5    │   6    │  ← Row 3 (indices 4-5)
+├────────┼────────┤
+│   7    │   8    │  ← Row 4 (indices 6-7)
+└────────┴────────┘
+    8 Total Positions
 ```
 
 ### Position Indexing
@@ -90,6 +108,8 @@ A visual, interactive timer application that simulates a real pasta cooking sink
 | Color Code | Red border |
 
 #### Extra Large Tray Valid Placements
+
+**Desktop (4×2 grid):**
 ```
 Configuration A:        Configuration B:        Configuration C:
 ┌────┬────┬────┬────┐   ┌────┬────┬────┬────┐   ┌────┬────┬────┬────┐
@@ -100,6 +120,26 @@ Configuration A:        Configuration B:        Configuration C:
 Positions: 1,2,5,6      Positions: 2,3,6,7      Positions: 3,4,7,8
 Start Index: 0          Start Index: 1          Start Index: 2
 ```
+
+**Mobile Portrait (2×4 grid):**
+```
+Configuration A:        Configuration B:        Configuration C:
+┌────┬────┐             ┌────┬────┐             ┌────┬────┐
+│ ██ │ ██ │ Pos: 1,2    │    │    │             │    │    │
+├────┼────┤             ├────┼────┤             ├────┼────┤
+│ ██ │ ██ │ Pos: 3,4    │ ██ │ ██ │ Pos: 3,4    │    │    │
+├────┼────┤             ├────┼────┤             ├────┼────┤
+│    │    │             │ ██ │ ██ │ Pos: 5,6    │ ██ │ ██ │ Pos: 5,6
+├────┼────┤             ├────┼────┤             ├────┼────┤
+│    │    │             │    │    │             │ ██ │ ██ │ Pos: 7,8
+└────┴────┘             └────┴────┘             └────┴────┘
+Positions: 1,2,3,4      Positions: 3,4,5,6      Positions: 5,6,7,8
+Start Index: 0          Start Index: 2          Start Index: 4
+```
+
+**Note:** The 2×2 block calculation differs by layout:
+- **Desktop**: `[start, start+1, start+4, start+5]` (skips to next row)
+- **Mobile Portrait**: `[start, start+1, start+2, start+3]` (sequential positions)
 
 ---
 
@@ -129,18 +169,27 @@ Start Index: 0          Start Index: 1          Start Index: 2
 - Completion alert with animation ("DONE! 🎉")
 - **Ravioli Special Handling**: Time range validation (4-10 minutes)
 
-#### 3. Drag & Drop Rearrangement
-- **Desktop**: Mouse drag and drop with HTML5 API
-- **Mobile/Tablet**: Touch-based drag and drop
-  - Long-press tray handle to start drag
-  - Smooth touch interactions with haptic feedback
-  - Improved sensitivity (8px threshold)
-  - Visual feedback during drag
-- Drag trays to new positions
-- Visual drop preview (purple highlight)
-- Collision detection prevents invalid placements
-- Maintains pasta timers during moves
-- **Portrait Layout Support**: 2x2 blocks adapt to portrait orientation on mobile
+#### 3. Drag & Drop Rearrangement (Powered by @dnd-kit)
+- **@dnd-kit Integration**: Professional drag-and-drop library for React
+  - `useDraggable` hook for tray dragging
+  - `useDroppable` hook for position drop zones
+  - `DragOverlay` for smooth visual feedback during drag
+  - `closestCenter` collision detection algorithm
+- **Desktop**: Mouse-based drag with 8px activation threshold
+- **Mobile/Tablet**: Touch-based drag with 150ms delay + 8px tolerance
+  - Haptic feedback on drag start (vibration API)
+  - Smooth touch interactions
+  - Visual floating tray follows finger
+- **Visual Feedback**:
+  - Green preview for valid 2×2 placements
+  - Purple highlight for drop zones
+  - Swap preview when overlapping with other trays
+- **Smart Features**:
+  - Collision detection prevents invalid placements
+  - Automatic swap detection for tray exchanges
+  - Maintains pasta timers during moves
+  - Disabled droppables for covered positions
+- **Portrait Layout Support**: 2×2 blocks adapt to portrait orientation on mobile
 
 #### 4. Space Optimization
 - Visual indicators show available positions
@@ -238,6 +287,7 @@ interface Tray {
 | Framework | React 18 |
 | Language | TypeScript |
 | Build Tool | Vite 5 |
+| Drag & Drop | @dnd-kit/core |
 | Styling | CSS3 (Custom) |
 | State Management | React useState |
 | Hosting | GitHub Pages |
@@ -415,7 +465,22 @@ MIT License - Free for commercial and personal use.
 
 ## 🎯 Recent Updates
 
-### Version 2.0 Features (Latest)
+### Version 3.0 Features (Latest)
+- **@dnd-kit Integration**: Professional drag-and-drop library replacing custom touch handlers
+  - Smooth cross-platform drag interactions
+  - `DragOverlay` for visual feedback during drag
+  - `closestCenter` collision detection
+  - Proper droppable zones for each grid cell
+- **Improved Mobile Portrait**: 
+  - 2×4 grid layout (2 columns × 4 rows)
+  - Correct 2×2 block calculations for extra-large trays
+  - Green preview highlighting for valid drop zones
+  - Disabled droppables for covered positions
+- **Better Collision Handling**: 
+  - Prevents tray overlapping
+  - Smart swap detection when dragging over occupied positions
+
+### Version 2.0 Features
 - **Mobile Optimization**: Portrait layout (2×4 grid) for mobile devices
 - **Visual Pasta Selector**: Image cards with preset cooking times
 - **Touch Drag & Drop**: Improved mobile interaction with haptic feedback

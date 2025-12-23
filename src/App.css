@@ -110,10 +110,7 @@
   }
   
   .app-controls {
-    padding: 12px;
-    flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
+    display: none; /* Hide dropdown on mobile - use modal instead */
   }
   
   .sink-container {
