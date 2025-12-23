@@ -22,6 +22,7 @@ export interface Tray {
 function App() {
   const [trays, setTrays] = useState<Tray[]>([])
   const [selectedTrayType, setSelectedTrayType] = useState<'regular' | 'large' | 'extraLarge'>('regular')
+  const [newlyAddedTrayId, setNewlyAddedTrayId] = useState<string | null>(null)
 
   const getTraySize = (type: 'regular' | 'large' | 'extraLarge'): number => {
     switch (type) {
@@ -136,6 +137,10 @@ function App() {
     }
 
     setTrays([...trays, newTray])
+    // Auto-select this tray for pasta form
+    setNewlyAddedTrayId(newTray.id)
+    // Clear selection after a short delay
+    setTimeout(() => setNewlyAddedTrayId(null), 100)
   }
 
   const handleAddPasta = (trayId: string, pasta: Omit<Pasta, 'id' | 'startTime'>) => {
@@ -443,6 +448,7 @@ function App() {
           <PastaForm
             trays={trays}
             onAddPasta={handleAddPasta}
+            autoSelectTrayId={newlyAddedTrayId || undefined}
           />
         </div>
       </div>
