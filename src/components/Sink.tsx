@@ -135,7 +135,7 @@ const Sink = ({
 
       osc.type = 'sine'
       osc.frequency.value = 880 // A5
-      gain.gain.value = 0.1
+      gain.gain.value = 0.5
 
       osc.start()
       osc.stop(ctx.currentTime + 0.15) // Short 150ms beep
@@ -432,8 +432,12 @@ const Sink = ({
               className="remove-tray-btn"
               onClick={(e) => {
                 e.stopPropagation()
-                // Open confirmation dialog instead of deleting immediately
-                setConfirmDeleteId(tray.id)
+                // If pasta is done, remove immediately. Otherwise ask for confirmation.
+                if (hasDonePasta) {
+                  onRemoveTray(tray.id)
+                } else {
+                  setConfirmDeleteId(tray.id)
+                }
               }}
               title="Remove tray"
             >

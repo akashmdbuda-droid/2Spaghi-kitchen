@@ -226,41 +226,7 @@
   gap: 4px;
 }
 
-.drag-handle {
-  cursor: grab;
-  color: #9ca3af;
-  font-size: 0.8rem;
-  letter-spacing: -2px;
-  user-select: none;
-  padding: 2px;
-  border-radius: 2px;
-  transition: all 0.2s;
-  /* Better touch target for mobile */
-  min-width: 32px;
-  min-height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  touch-action: none;
-  /* Prevent scrolling when dragging */
-}
-
-@media (max-width: 480px) {
-  .drag-handle {
-    min-width: 40px;
-    min-height: 40px;
-    font-size: 1rem;
-  }
-}
-
-.drag-handle:hover {
-  color: #6b7280;
-  background: #f3f4f6;
-}
-
-.drag-handle:active {
-  cursor: grabbing;
-}
+/* Old drag handle removed, new one added below */
 
 .tray-label {
   font-size: 0.75rem;
@@ -888,5 +854,132 @@
 
   .drag-overlay-tray .tray {
     transform: rotate(-1deg);
+  }
+}
+
+/* Drag Handle */
+.drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  padding: 8px;
+  color: #9ca3af;
+  border-radius: 4px;
+  touch-action: none;
+  margin-right: 4px;
+  transition: all 0.2s;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+  color: var(--color-primary);
+  background: rgba(190, 151, 67, 0.1);
+}
+
+.drag-icon {
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: -2px;
+  font-weight: bold;
+}
+
+/* Confirmation Modal */
+.confirmation-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  /* High z-index */
+  backdrop-filter: blur(4px);
+  animation: fade-in 0.2s ease-out;
+  padding: 20px;
+}
+
+.confirmation-modal {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 24px;
+  border-radius: var(--radius-md);
+  width: 100%;
+  max-width: 340px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  text-align: center;
+  animation: slide-up 0.2s ease-out;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.confirmation-modal h3 {
+  margin: 0 0 12px 0;
+  color: var(--color-text-header);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.confirmation-modal p {
+  margin: 0 0 24px 0;
+  color: var(--color-text-light);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.confirmation-actions button {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: transform 0.1s;
+}
+
+.confirmation-actions button:active {
+  transform: scale(0.98);
+}
+
+.cancel-btn {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-body);
+  border: 1px solid #e5e7eb;
+}
+
+.confirm-btn {
+  background: #ef4444;
+  /* Keep red for danger action */
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
 }
