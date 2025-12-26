@@ -12,6 +12,7 @@ import {
   closestCenter,
   useDroppable,
   useDraggable,
+  DraggableSyntheticListeners,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { Tray, Pasta } from '../App'
@@ -395,9 +396,10 @@ const Sink = ({
   }
 
   const previewPositions = hoveredPosition !== null && !activeTray ? getHoverPreview(hoveredPosition) : null
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null) // New state for delete confirmation
 
   // Render a tray card (used for both regular rendering and drag overlay)
-  const renderTrayCard = (tray: Tray, isOverlay = false) => {
+  const renderTrayCard = (tray: Tray, isOverlay = false, dragListeners?: DraggableSyntheticListeners) => {
     // Check if any pasta in this tray is done
     const hasDonePasta = tray.pastas.some(p => getRemainingTime(p) <= 0)
 
@@ -418,14 +420,20 @@ const Sink = ({
         }}
       >
         <div className="tray-header">
-          {/* Drag handle removed visually, but entire card is draggable due to draggable listeners on container */}
+          {/* Drag Handle */}
+          {!isOverlay && dragListeners && (
+            <div className="drag-handle" {...dragListeners} title="Drag to move">
+              <span className="drag-icon">⋮⋮</span>
+            </div>
+          )}
           <span className="tray-label">{getTrayLabel(tray)}</span>
           {!isOverlay && (
             <button
               className="remove-tray-btn"
               onClick={(e) => {
                 e.stopPropagation()
-                onRemoveTray(tray.id)
+                // Open confirmation dialog instead of deleting immediately
+                setConfirmDeleteId(tray.id)
               }}
               title="Remove tray"
             >
@@ -554,7 +562,7 @@ const Sink = ({
               >
                 {isStartOfTray && (
                   <DraggableTray tray={tray} isDragging={!!isDragging}>
-                    {renderTrayCard(tray)}
+                    {(dragListeners) => renderTrayCard(tray, false, dragListeners)}
                   </DraggableTray>
                 )}
                 {!tray && !isPreview && !isDropPreview && (
@@ -590,6 +598,33 @@ const Sink = ({
           </div>
         )}
       </DragOverlay>
+
+      {/* Delete Confirmation Modal */}
+      {confirmDeleteId && (
+        <div className="confirmation-modal-overlay">
+          <div className="confirmation-modal">
+            <h3>Remove Tray?</h3>
+            <p>Are you sure you want to remove this tray? This action cannot be undone.</p>
+            <div className="confirmation-actions">
+              <button
+                className="cancel-btn"
+                onClick={() => setConfirmDeleteId(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="confirm-btn"
+                onClick={() => {
+                  onRemoveTray(confirmDeleteId)
+                  setConfirmDeleteId(null)
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DndContext>
   )
 }
@@ -633,7 +668,15 @@ function DroppablePosition({
   )
 }
 
-function DraggableTray({ tray, isDragging, children }: { tray: Tray; isDragging: boolean; children: React.ReactNode }) {
+function DraggableTray({
+  tray,
+  isDragging,
+  children
+}: {
+  tray: Tray;
+  isDragging: boolean;
+  children: (dragListeners: DraggableSyntheticListeners | undefined) => React.ReactNode
+}) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: tray.id,
   })
@@ -642,17 +685,19 @@ function DraggableTray({ tray, isDragging, children }: { tray: Tray; isDragging:
     transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.3 : 1,
     transition: isDragging ? 'opacity 0.2s ease' : undefined,
+    zIndex: isDragging ? 999 : undefined,
+    touchAction: 'none' // Important for the drag handle, but we'll apply listeners to handle specific
   }
 
+  // We apply attributes to the container for a11y, but listeners passed down to handle
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={`tray-container ${isDragging ? 'is-dragging' : ''}`}
-      {...listeners}
       {...attributes}
     >
-      {children}
+      {children(listeners)}
     </div>
   )
 }
